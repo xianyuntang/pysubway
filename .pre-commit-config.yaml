@@ -1,0 +1,26 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        entry: ruff
+        language: system
+        name: ruff (python)
+        types: [ python ]
+        args: [ "check", "." ]
+        pass_filenames: false
+
+
+      - id: ruff-format
+        entry: ruff
+        language: system
+        name: ruff format (python)
+        types: [ python ]
+        args: [ "format", "--check" ]
+
+      - id: mypy
+        entry: mypy
+        language: system
+        name: mypy (python)
+        types: [ python ]
+        args: [ ".", "--config-file=./pyproject.toml" ]
+        pass_filenames: false
