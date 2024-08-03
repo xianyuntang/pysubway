@@ -1,5 +1,5 @@
 # Subway
-A HTTP tunnel service written in Python
+A HTTP tunnel service written in Python with zero dependencies
 
 ## Usage
 
