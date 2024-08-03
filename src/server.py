@@ -51,6 +51,7 @@ class Server:
                 request_stream = self.request_streams.pop(message["id"])
                 if request_stream:
                     await proxy(Stream(reader=reader, writer=writer), request_stream)
+                    break
 
     async def handle_request_connection(
         self, control_stream: Stream, request_stream: Stream
