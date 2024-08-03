@@ -27,6 +27,9 @@ class Stream(NamedTuple):
     writer: StreamWriter
 
 
+TIMEOUT = 50 * 0.001
+
+
 async def _pipe(*, reader: StreamReader, writer: StreamWriter) -> None:
     try:
         while True:
@@ -48,11 +51,11 @@ async def proxy(stream1: Stream, stream2: Stream) -> None:
             asyncio.create_task(_pipe(reader=stream1.reader, writer=stream2.writer)),
             asyncio.create_task(_pipe(reader=stream2.reader, writer=stream1.writer)),
         ],
-        timeout=0.01,
+        timeout=TIMEOUT,
         return_when=asyncio.FIRST_COMPLETED,
     )
 
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(TIMEOUT)
 
 
 async def read(reader: StreamReader) -> AsyncGenerator[dict[str, str], None]:
