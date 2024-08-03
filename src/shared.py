@@ -39,7 +39,10 @@ async def _pipe(*, reader: StreamReader, writer: StreamWriter) -> None:
         logger.debug(e)
     finally:
         writer.close()
-        await writer.wait_closed()
+        try:
+            await writer.wait_closed()
+        except Exception as e:  # noqa: BLE001
+            logger.debug(e)
 
 
 async def proxy(stream1: Stream, stream2: Stream) -> None:
