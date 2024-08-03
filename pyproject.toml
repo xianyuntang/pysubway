@@ -33,7 +33,6 @@ ignore = ["D", "ANN101", "ANN102", "FIX002", "COM812", "ISC001"]
 convention = "google"
 
 [tool.mypy]
-plugins = ["pydantic.mypy"]
 disable_error_code = ["import-untyped"]
 strict = true
 exclude = ['^tests/.+', '^alembic/.+']
