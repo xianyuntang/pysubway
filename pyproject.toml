@@ -27,7 +27,6 @@ ignore = ["D", "ANN101", "ANN102", "FIX002", "COM812", "ISC001"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*" = ["S101"]
-"alembic/versions/*.py" = ["ALL"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -35,7 +34,7 @@ convention = "google"
 [tool.mypy]
 disable_error_code = ["import-untyped"]
 strict = true
-exclude = ['^tests/.+', '^alembic/.+']
+exclude = ['^tests/.+']
 
 
 [tool.coverage.report]
