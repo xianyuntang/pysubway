@@ -19,7 +19,6 @@ class MessageType(StrEnum):
     hello = auto()
     open = auto()
     accept = auto()
-    connection = auto()
 
 
 class Stream(NamedTuple):

@@ -30,9 +30,12 @@ class Server:
                 logger.info("Accept client hello")
 
                 request_server = await asyncio.start_server(
-                    lambda r, w: self.handle_request_connection(
+                    lambda request_reader,
+                    request_writer: self.handle_request_connection(
                         control_stream=Stream(reader=reader, writer=writer),
-                        request_stream=Stream(reader=r, writer=w),
+                        request_stream=Stream(
+                            reader=request_reader, writer=request_writer
+                        ),
                     ),
                     CONTROL_HOST,
                     0,
@@ -59,7 +62,7 @@ class Server:
         self.request_streams[request_id] = request_stream
         await write(
             control_stream.writer,
-            message_type=MessageType.connection,
+            message_type=MessageType.open,
             id=request_id,
         )
 

@@ -30,7 +30,7 @@ class Client:
                 logger.info(f'Server listens on {message["port"]}')
                 self.remote_port = message["port"]
 
-            elif message["message_type"] == MessageType.connection:
+            elif message["message_type"] == MessageType.open:
                 remote_reader, remote_writer = await open_connection(
                     self.control_host, self.control_port
                 )
