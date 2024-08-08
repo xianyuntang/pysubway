@@ -8,6 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.12.4"
 poethepoet = "^0.27.0"
+pydantic = "^2.8.2"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -48,7 +49,7 @@ filterwarnings = [
 
 
 [tool.poe.tasks.client]
-cmd = "python -m src.client --host=$host --port=$port local_port"
+cmd = "python -m src.main client --host=$host --port=$port $local_port"
 args = [
     { name = "local_port", positional = true, required = true, help = "local port" },
     { name = "host", required = true, help = "control server host"},

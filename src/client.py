@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from asyncio import open_connection
 
-from src.shared import MessageType, Stream, logger, proxy, read, write
+from src.shared import Message, MessageType, Stream, logger, proxy, read, write
 
 
 class Client:
@@ -23,14 +23,14 @@ class Client:
         )
         self.control_stream = Stream(reader=control_reader, writer=control_writer)
 
-        await write(control_writer, message_type=MessageType.hello)
+        await write(control_writer, message=Message(type=MessageType.hello))
         async for message in read(control_reader):
             logger.debug(f"Receive message: {message}")
-            if message["message_type"] == MessageType.hello:
-                logger.info(f'Server listens on {message["port"]}')
-                self.remote_port = message["port"]
+            if message.type == MessageType.hello and message.port is not None:
+                logger.info(f"Server listens on {message.port}")
+                self.remote_port = message.port
 
-            elif message["message_type"] == MessageType.open:
+            elif message.type == MessageType.open and message.id is not None:
                 remote_reader, remote_writer = await open_connection(
                     self.control_host, self.control_port
                 )
@@ -39,7 +39,8 @@ class Client:
                 )
 
                 await write(
-                    remote_writer, message_type=MessageType.accept, id=message["id"]
+                    remote_writer,
+                    message=Message(type=MessageType.accept, id=message.id),
                 )
                 await proxy(
                     Stream(reader=remote_reader, writer=remote_writer),
@@ -48,5 +49,5 @@ class Client:
 
 
 if __name__ == "__main__":
-    client = Client(control_host="0.0.0.0", control_port="7835", local_port="4200")  # noqa: S104
+    client = Client(control_host="0.0.0.0", control_port="5678", local_port="4200")  # noqa: S104
     asyncio.run(client.listen())

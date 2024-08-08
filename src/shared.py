@@ -7,6 +7,8 @@ from asyncio import StreamReader, StreamWriter
 from enum import StrEnum, auto
 from typing import AsyncGenerator, NamedTuple
 
+from pydantic import BaseModel
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO,
@@ -19,6 +21,12 @@ class MessageType(StrEnum):
     hello = auto()
     open = auto()
     accept = auto()
+
+
+class Message(BaseModel):
+    type: MessageType
+    id: str | None = None
+    port: str | None = None
 
 
 class Stream(NamedTuple):
@@ -55,7 +63,7 @@ async def proxy(stream1: Stream, stream2: Stream) -> None:
     )
 
 
-async def read(reader: StreamReader) -> AsyncGenerator[dict[str, str], None]:
+async def read(reader: StreamReader) -> AsyncGenerator[Message, None]:
     while True:
         length_data = await reader.read(10)
         logger.debug(length_data)
@@ -65,13 +73,11 @@ async def read(reader: StreamReader) -> AsyncGenerator[dict[str, str], None]:
         message = (await reader.read(message_length)).decode()
         logger.debug(message)
 
-        yield json.loads(message)
+        yield Message(**json.loads(message))
 
 
-async def write(
-    writer: StreamWriter, *, message_type: MessageType, **kwargs: str
-) -> None:
-    message_data = json.dumps({"message_type": message_type, **kwargs})
+async def write(writer: StreamWriter, *, message: Message) -> None:
+    message_data = message.model_dump_json()
     message_body = message_data.encode()
     message_header = f"{len(message_body):>10}".encode()
 

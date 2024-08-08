@@ -2,7 +2,7 @@ import asyncio
 from asyncio import StreamReader, StreamWriter
 from uuid import uuid4
 
-from src.shared import MessageType, Stream, logger, proxy, read, write
+from src.shared import Message, MessageType, Stream, logger, proxy, read, write
 
 CONTROL_HOST = "0.0.0.0"  # noqa: S104
 
@@ -26,7 +26,7 @@ class Server:
     ) -> None:
         async for message in read(reader):
             logger.debug("Receive message: %s", message)
-            if message["message_type"] == MessageType.hello:
+            if message.type == MessageType.hello:
                 logger.info("Accept client hello")
 
                 request_server = await asyncio.start_server(
@@ -40,16 +40,18 @@ class Server:
                     CONTROL_HOST,
                     0,
                 )
-                request_server_port = request_server.sockets[0].getsockname()[1]
+
+                request_server_port: int = request_server.sockets[0].getsockname()[1]
                 await write(
                     writer,
-                    message_type=MessageType.hello,
-                    port=request_server_port,
+                    message=Message(
+                        type=MessageType.hello, port=str(request_server_port)
+                    ),
                 )
                 async with request_server:
                     await request_server.serve_forever()
-            elif message["message_type"] == MessageType.accept:
-                request_stream = self.request_streams.pop(message["id"])
+            elif message.type == MessageType.accept and message.id is not None:
+                request_stream = self.request_streams.pop(message.id)
                 if request_stream:
                     await proxy(Stream(reader=reader, writer=writer), request_stream)
                     break
@@ -61,9 +63,7 @@ class Server:
         logger.info("New connection id: %s", request_id)
         self.request_streams[request_id] = request_stream
         await write(
-            control_stream.writer,
-            message_type=MessageType.open,
-            id=request_id,
+            control_stream.writer, message=Message(type=MessageType.open, id=request_id)
         )
 
 
