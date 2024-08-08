@@ -1,8 +1,9 @@
 import asyncio
 from asyncio import StreamReader, StreamWriter
-from uuid import uuid4
 
-from src.shared import Message, MessageType, Stream, logger, proxy, read, write
+from nanoid import generate
+
+from src.shared import Message, MessageType, Stream, bridge, logger, read, write
 
 CONTROL_HOST = "0.0.0.0"  # noqa: S104
 
@@ -53,13 +54,13 @@ class Server:
             elif message.type == MessageType.accept and message.id is not None:
                 request_stream = self.request_streams.pop(message.id)
                 if request_stream:
-                    await proxy(Stream(reader=reader, writer=writer), request_stream)
+                    await bridge(Stream(reader=reader, writer=writer), request_stream)
                     break
 
     async def handle_request_connection(
         self, control_stream: Stream, request_stream: Stream
     ) -> None:
-        request_id = str(uuid4())
+        request_id = generate()
         logger.info("New connection id: %s", request_id)
         self.request_streams[request_id] = request_stream
         await write(

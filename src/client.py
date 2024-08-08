@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from asyncio import open_connection
 
-from src.shared import Message, MessageType, Stream, logger, proxy, read, write
+from src.shared import Message, MessageType, Stream, bridge, logger, read, write
 
 
 class Client:
@@ -42,7 +42,7 @@ class Client:
                     remote_writer,
                     message=Message(type=MessageType.accept, id=message.id),
                 )
-                await proxy(
+                await bridge(
                     Stream(reader=remote_reader, writer=remote_writer),
                     Stream(reader=local_reader, writer=local_writer),
                 )

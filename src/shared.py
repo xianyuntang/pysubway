@@ -52,7 +52,7 @@ async def _pipe(*, reader: StreamReader, writer: StreamWriter) -> None:
             logger.debug(e)
 
 
-async def proxy(stream1: Stream, stream2: Stream) -> None:
+async def bridge(stream1: Stream, stream2: Stream) -> None:
     await asyncio.wait(
         [
             asyncio.create_task(_pipe(reader=stream1.reader, writer=stream2.writer)),
