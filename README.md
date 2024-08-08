@@ -1,5 +1,5 @@
 # Subway
-A HTTP tunnel service written in Python with zero dependencies
+A HTTP tunnel service written in Python
 
 ## Usage
 
@@ -11,4 +11,16 @@ python -m src.main server
 ### Start subway client
 ```shell
 python -m src.main client --host <host> <local_port>
+```
+
+## If you have poethepoet installed
+
+### Start subway server 
+```shell
+poe server
+```
+
+### Start subway client
+```shell
+poe client --host <host> <local_port>
 ```

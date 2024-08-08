@@ -7,6 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12.4"
+poethepoet = "^0.27.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -43,4 +44,21 @@ omit = ["tests/*", "**/*/__init__.py"]
 [tool.pytest.ini_options]
 filterwarnings = [
     'ignore::DeprecationWarning',
+]
+
+
+[tool.poe.tasks.client]
+cmd = "python -m src.client --host=$host --port=$port local_port"
+args = [
+    { name = "local_port", positional = true, required = true, help = "local port" },
+    { name = "host", required = true, help = "control server host"},
+    { name = "port", default = "5678", help = "control server port"},
+]
+
+
+
+[tool.poe.tasks.server]
+cmd = "python -m src.main server --port=$port"
+args = [
+    { name = "port", default = "5678" }
 ]
