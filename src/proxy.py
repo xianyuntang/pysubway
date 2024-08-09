@@ -12,7 +12,7 @@ from src.shared import DEFAULT_DOMAIN, LOCAL_BIND
 
 
 class Proxy:
-    def __init__(self, *, domain: str, port: str = "80", use_ssl: bool) -> None:
+    def __init__(self, *, domain: str, port: str, use_ssl: bool) -> None:
         self.hosts: dict[str, str] = {}
         self.domain = domain
         self.port = port
@@ -76,5 +76,5 @@ class Proxy:
 
 
 if __name__ == "__main__":
-    proxy = Proxy(domain=DEFAULT_DOMAIN, use_ssl=False)
+    proxy = Proxy(domain=DEFAULT_DOMAIN, use_ssl=False, port="5679")
     asyncio.run(proxy.listen())

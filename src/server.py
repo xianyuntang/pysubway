@@ -18,11 +18,13 @@ from src.shared import (
 
 
 class Server:
-    def __init__(self, *, control_port: str, domain: str, use_ssl: bool) -> None:
+    def __init__(
+        self, *, control_port: str, proxy_port: str, domain: str, use_ssl: bool
+    ) -> None:
         self.control_port = control_port
         self.request_streams: dict[str, Stream] = {}
 
-        self.proxy = Proxy(domain=domain, use_ssl=use_ssl)
+        self.proxy = Proxy(domain=domain, use_ssl=use_ssl, port=proxy_port)
 
     async def listen(self) -> None:
         control_server = await asyncio.start_server(
@@ -87,5 +89,7 @@ class Server:
 
 
 if __name__ == "__main__":
-    server = Server(control_port="5678", domain=DEFAULT_DOMAIN, use_ssl=False)
+    server = Server(
+        control_port="5678", proxy_port="5679", domain=DEFAULT_DOMAIN, use_ssl=False
+    )
     asyncio.run(server.listen())

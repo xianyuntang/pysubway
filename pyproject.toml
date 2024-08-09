@@ -61,9 +61,10 @@ args = [
 
 
 [tool.poe.tasks.server]
-cmd = "python -m src.main server --port=$port --domain=$domain --use_ssl=$use_ssl"
+cmd = "python -m src.main server --control_port=$control_port --proxy_port=$proxy_port --domain=$domain --use_ssl=$use_ssl"
 args = [
-    { name = "port", default = "5678" },
+    { name = "control_port", default = "5678" },
+    { name = "proxy_port", default = "5679" },
     { name = "domain", default = "subway.dysonshark.com"},
     { name = "use_ssl", default = "false"},
 ]

@@ -20,7 +20,10 @@ def create_parser() -> ArgumentParser:
 
     server_parser = subparsers.add_parser("server", help="Server command")
     server_parser.add_argument(
-        "-p", "--port", type=str, default="5678", help="control port"
+        "--control_port", type=str, default="5678", help="control port"
+    )
+    server_parser.add_argument(
+        "--proxy_port", type=str, default="5679", help="proxy port"
     )
     server_parser.add_argument(
         "--use_ssl",
@@ -46,7 +49,12 @@ async def handle_client(args: Namespace) -> None:
 
 
 async def handle_server(args: Namespace) -> None:
-    server = Server(control_port=args.port, domain=args.domain, use_ssl=args.use_ssl)
+    server = Server(
+        control_port=args.control_port,
+        proxy_port=args.proxy_port,
+        domain=args.domain,
+        use_ssl=args.use_ssl,
+    )
     await server.listen()
 
 
