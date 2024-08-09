@@ -22,4 +22,4 @@ WORKDIR /app
 ENV PATH="/app/.venv/bin:$PATH"
 COPY . /app
 COPY --from=builder /app/.venv /app/.venv
-RUN mkdir ~/.subway/ssl
+RUN mkdir /root/.subway/ssl
