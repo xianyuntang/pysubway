@@ -56,9 +56,10 @@ class Server:
                 request_server_port: str = str(
                     request_server.sockets[0].getsockname()[1]
                 )
-                subdomain = generate()
+
+                domain_prefix = generate()
                 endpoint = self.proxy.register_upstream(
-                    subdomain=subdomain, port=request_server_port
+                    domain_prefix=domain_prefix, port=request_server_port
                 )
                 logger.info(f"Request server listen on {request_server_port}")
 

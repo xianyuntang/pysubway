@@ -23,15 +23,15 @@ class Proxy:
 
         self.app = app
 
-    def register_upstream(self, *, subdomain: str, port: str) -> str:
+    def register_upstream(self, *, domain_prefix: str, port: str) -> str:
         prefix = "https" if self.use_ssl else "http"
-        self.hosts[subdomain] = f"{prefix}://{LOCAL_BIND}:{port}"
-        return f"{prefix}://{subdomain}.{self.domain}"
+        self.hosts[domain_prefix] = f"{prefix}://{LOCAL_BIND}:{port}"
+        return f"{prefix}://{domain_prefix}-{self.domain}"
 
     def _get_upstream_url(self, *, host: str) -> str | None:
         if host.endswith(self.domain):
-            subdomain = host.replace(f"-{self.domain}", "")
-            return self.hosts.get(subdomain, None)
+            domain_prefix = host.replace(f"-{self.domain}", "")
+            return self.hosts.get(domain_prefix, None)
 
         return None
 
