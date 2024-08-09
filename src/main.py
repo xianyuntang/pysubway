@@ -3,6 +3,7 @@ from argparse import ArgumentParser, Namespace
 
 from src.client import Client
 from src.server import Server
+from src.shared import DEFAULT_DOMAIN
 
 
 def create_parser() -> ArgumentParser:
@@ -21,6 +22,18 @@ def create_parser() -> ArgumentParser:
     server_parser.add_argument(
         "-p", "--port", type=str, default="5678", help="control port"
     )
+    server_parser.add_argument(
+        "--use_ssl",
+        type=lambda v: v.lower() in ["true", "1", "yes"],
+        default=False,
+        help="Use https instead of http",
+    )
+    server_parser.add_argument(
+        "--domain",
+        type=str,
+        default=DEFAULT_DOMAIN,
+        help="Custom domain name",
+    )
 
     return parser
 
@@ -33,7 +46,7 @@ async def handle_client(args: Namespace) -> None:
 
 
 async def handle_server(args: Namespace) -> None:
-    server = Server(control_port=args.port)
+    server = Server(control_port=args.port, domain=args.domain, use_ssl=args.use_ssl)
     await server.listen()
 
 

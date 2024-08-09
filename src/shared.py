@@ -2,19 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 from asyncio import StreamReader, StreamWriter
 from enum import StrEnum, auto
 from typing import AsyncGenerator, NamedTuple
 
 from pydantic import BaseModel
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
+from src.logger import logger
+
+LOCAL_BIND = "0.0.0.0"  # noqa: S104
+DEFAULT_DOMAIN = "subway.dysonshark.com"
 
 
 class MessageType(StrEnum):
@@ -26,7 +23,7 @@ class MessageType(StrEnum):
 class Message(BaseModel):
     type: MessageType
     id: str | None = None
-    port: str | None = None
+    endpoint: str | None = None
 
 
 class Stream(NamedTuple):

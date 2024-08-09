@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 from asyncio import open_connection
 
-from src.shared import Message, MessageType, Stream, bridge, logger, read, write
+from src.logger import logger
+from src.shared import Message, MessageType, Stream, bridge, read, write
 
 
 class Client:
@@ -15,7 +16,6 @@ class Client:
         self.local_port = local_port
 
         self.control_stream: Stream | None = None
-        self.remote_port: str | None = None
 
     async def listen(self) -> None:
         control_reader, control_writer = await open_connection(
@@ -26,9 +26,8 @@ class Client:
         await write(control_writer, message=Message(type=MessageType.hello))
         async for message in read(control_reader):
             logger.debug(f"Receive message: {message}")
-            if message.type == MessageType.hello and message.port is not None:
-                logger.info(f"Server listens on {message.port}")
-                self.remote_port = message.port
+            if message.type == MessageType.hello and message.endpoint is not None:
+                logger.info(f"Server listens on {message.endpoint}")
 
             elif message.type == MessageType.open and message.id is not None:
                 remote_reader, remote_writer = await open_connection(

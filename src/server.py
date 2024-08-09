@@ -3,24 +3,35 @@ from asyncio import StreamReader, StreamWriter
 
 from nanoid import generate
 
-from src.shared import Message, MessageType, Stream, bridge, logger, read, write
-
-CONTROL_HOST = "0.0.0.0"  # noqa: S104
+from src.logger import logger
+from src.proxy import Proxy
+from src.shared import (
+    DEFAULT_DOMAIN,
+    LOCAL_BIND,
+    Message,
+    MessageType,
+    Stream,
+    bridge,
+    read,
+    write,
+)
 
 
 class Server:
-    def __init__(self, *, control_port: str) -> None:
+    def __init__(self, *, control_port: str, domain: str, use_ssl: bool) -> None:
         self.control_port = control_port
         self.request_streams: dict[str, Stream] = {}
 
+        self.proxy = Proxy(domain=domain, use_ssl=use_ssl)
+
     async def listen(self) -> None:
         control_server = await asyncio.start_server(
-            self.handle_connection, CONTROL_HOST, self.control_port
+            self.handle_connection, LOCAL_BIND, self.control_port
         )
 
         async with control_server:
-            logger.info(f"Start listen on port {self.control_port}")
-            await control_server.serve_forever()
+            logger.info(f"Control server listen on {LOCAL_BIND}:{self.control_port}")
+            await asyncio.gather(control_server.start_serving(), self.proxy.listen())
 
     async def handle_connection(
         self, reader: StreamReader, writer: StreamWriter
@@ -28,8 +39,6 @@ class Server:
         async for message in read(reader):
             logger.debug("Receive message: %s", message)
             if message.type == MessageType.hello:
-                logger.info("Accept client hello")
-
                 request_server = await asyncio.start_server(
                     lambda request_reader,
                     request_writer: self.handle_request_connection(
@@ -38,15 +47,24 @@ class Server:
                             reader=request_reader, writer=request_writer
                         ),
                     ),
-                    CONTROL_HOST,
+                    LOCAL_BIND,
                     0,
                 )
 
-                request_server_port: int = request_server.sockets[0].getsockname()[1]
+                request_server_port: str = str(
+                    request_server.sockets[0].getsockname()[1]
+                )
+                subdomain = generate()
+                endpoint = self.proxy.register_upstream(
+                    subdomain=subdomain, port=request_server_port
+                )
+                logger.info(f"Request server listen on {request_server_port}")
+
                 await write(
                     writer,
                     message=Message(
-                        type=MessageType.hello, port=str(request_server_port)
+                        type=MessageType.hello,
+                        endpoint=endpoint,
                     ),
                 )
                 async with request_server:
@@ -69,5 +87,5 @@ class Server:
 
 
 if __name__ == "__main__":
-    server = Server(control_port="5678")
+    server = Server(control_port="5678", domain=DEFAULT_DOMAIN, use_ssl=False)
     asyncio.run(server.listen())
