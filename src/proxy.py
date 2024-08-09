@@ -29,8 +29,8 @@ class Proxy:
         return f"{prefix}://{domain_prefix}-{self.domain}"
 
     def _get_upstream_url(self, *, host: str) -> str | None:
-        if host.endswith(self.domain):
-            domain_prefix = host.replace(f"-{self.domain}", "")
+        if host.endswith(f"{self.domain}:{self.port}"):
+            domain_prefix = host.replace(f"-{self.domain}:{self.port}", "")
             return self.hosts.get(domain_prefix, None)
 
         return None
@@ -69,7 +69,7 @@ class Proxy:
         site = TCPSite(runner, LOCAL_BIND, int(self.port), ssl_context=ssl_context)
         await site.start()
         logger.info(f"Proxy server listen on {LOCAL_BIND}:{self.port}")
-        logger.info(f"Proxy server will be serving your services on *.{self.domain}")
+        logger.info(f"Proxy server will be serving your services on *-{self.domain}")
 
         while True:
             await asyncio.sleep(3600)
