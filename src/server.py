@@ -57,7 +57,8 @@ class Server:
                     request_server.sockets[0].getsockname()[1]
                 )
 
-                domain_prefix = generate()
+                # domain name only have lower case
+                domain_prefix = generate().lower()
                 endpoint = self.proxy.register_upstream(
                     domain_prefix=domain_prefix, port=request_server_port
                 )
