@@ -66,7 +66,7 @@ class Proxy:
 
         runner = AppRunner(self.app)
         await runner.setup()
-        site = TCPSite(runner, LOCAL_BIND, 80, ssl_context=ssl_context)
+        site = TCPSite(runner, LOCAL_BIND, int(self.port), ssl_context=ssl_context)
         await site.start()
         logger.info(f"Proxy server listen on {LOCAL_BIND}:{self.port}")
         logger.info(f"Proxy server will be serving your services on *.{self.domain}")
