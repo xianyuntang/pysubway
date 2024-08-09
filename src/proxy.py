@@ -26,7 +26,7 @@ class Proxy:
     def register_upstream(self, *, domain_prefix: str, port: str) -> str:
         prefix = "https" if self.use_ssl else "http"
         self.hosts[domain_prefix] = f"{prefix}://{LOCAL_BIND}:{port}"
-        return f"{prefix}://{domain_prefix}-{self.domain}"
+        return f"{prefix}://{domain_prefix}-{self.domain}:{self.port}"
 
     def _get_upstream_url(self, *, host: str) -> str | None:
         if host.endswith(f"{self.domain}:{self.port}"):
