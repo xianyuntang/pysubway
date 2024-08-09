@@ -30,7 +30,7 @@ class Proxy:
 
     def _get_upstream_url(self, *, host: str) -> str | None:
         if host.endswith(self.domain):
-            subdomain = host.replace(f".{self.domain}", "")
+            subdomain = host.replace(f"-{self.domain}", "")
             return self.hosts.get(subdomain, None)
 
         return None
