@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "subway"
+name = "pysubway"
 version = "0.1.0"
 description = ""
 authors = ["tangxianyun <xianyun.tang@ailabs.tw>"]
@@ -65,6 +65,6 @@ args = [
 cmd = "python -m src.main server --control_port=$control_port --domain=$domain --use_ssl=$use_ssl"
 args = [
     { name = "control_port", default = "5678" },
-    { name = "domain", default = "dysonshark.com"},
+    { name = "domain", default = "pysubway.com"},
     { name = "use_ssl", default = "false"},
 ]

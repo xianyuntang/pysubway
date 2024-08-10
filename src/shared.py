@@ -14,7 +14,7 @@ from src.logger import logger
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 LOCAL_BIND = "0.0.0.0"  # noqa: S104
-DEFAULT_DOMAIN = "dysonshark.com"
+DEFAULT_DOMAIN = "pysubway.com"
 
 
 class MessageType(StrEnum):
