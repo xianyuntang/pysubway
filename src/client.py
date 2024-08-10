@@ -60,7 +60,7 @@ class Client:
                     logger.error(
                         f"Failed to connect to 127.0.0.1:{self.local_port} - {e}"
                     )
-                    return
+                    continue
 
                 await write(
                     remote_writer,
