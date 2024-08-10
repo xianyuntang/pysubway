@@ -4,11 +4,10 @@ from asyncio import StreamReader, StreamWriter
 import uvloop
 from nanoid import generate
 
+from src.const import DEFAULT_DOMAIN, LOCAL_BIND
 from src.logger import logger
 from src.proxy import Proxy
 from src.stream import (
-    DEFAULT_DOMAIN,
-    LOCAL_BIND,
     Message,
     MessageType,
     Stream,

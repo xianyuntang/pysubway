@@ -4,8 +4,8 @@ from argparse import ArgumentParser, Namespace
 import uvloop
 
 from src.client import Client
+from src.const import DEFAULT_DOMAIN
 from src.server import Server
-from src.stream import DEFAULT_DOMAIN
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 

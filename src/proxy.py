@@ -10,8 +10,8 @@ import aiohttp
 import uvloop
 from aiohttp.web import Application, AppRunner, Request, Response, TCPSite
 
+from src.const import DEFAULT_DOMAIN, EXPIRE_TIME, LOCAL_BIND
 from src.logger import logger
-from src.stream import DEFAULT_DOMAIN, LOCAL_BIND
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
@@ -28,6 +28,7 @@ class Proxy:
         self.use_ssl = use_ssl
         self.protocol = "https" if use_ssl else "http"
         self.port = 443 if use_ssl else 80
+        self.expire_after = 3600
 
         app = Application()
         app.router.add_route("*", "/{tail:.*}", self.proxy)
@@ -37,10 +38,13 @@ class Proxy:
     def _clean_up(self) -> None:
         now = time.time()
 
+        to_be_cleaned = []
         for key, upstream in self.upstreams.items():
             if upstream.expire_in < now:
-                logger.info(f"Cleaning up... delete endpoint {key}")
-                del self.upstreams[key]
+                to_be_cleaned.append(key)
+        for key in to_be_cleaned:
+            self.upstreams.pop(key)
+        logger.info(f"Cleaning up... delete {len(to_be_cleaned)} endpoint")
 
     def _build_endpoint(self, *, subdomain: str) -> str:
         return f"{self.protocol}://{subdomain}.{self.domain}"
@@ -55,7 +59,7 @@ class Proxy:
     def register_upstream(self, *, subdomain: str, port: str) -> str:
         endpoint = self._build_endpoint(subdomain=subdomain)
         self.upstreams[endpoint] = Upstream(
-            url=f"http://{LOCAL_BIND}:{port}", expire_in=time.time()
+            url=f"http://{LOCAL_BIND}:{port}", expire_in=time.time() + EXPIRE_TIME
         )
         return endpoint
 
@@ -106,9 +110,10 @@ class Proxy:
 
         while True:
             self._clean_up()
-            await asyncio.sleep(300)
+            await asyncio.sleep(60)
 
 
 if __name__ == "__main__":
     proxy = Proxy(domain=DEFAULT_DOMAIN, use_ssl=False)
+    proxy.register_upstream(subdomain="sdfsd", port="444")
     asyncio.run(proxy.listen())
