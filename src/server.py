@@ -59,7 +59,9 @@ class Server:
                 )
 
                 # domain name only have lower case
-                subdomain = generate().lower()
+                subdomain = generate(
+                    alphabet="abcdefghijklmnopqrstuvwxyz0123456789", size=36
+                )
                 endpoint = self.proxy.register_upstream(
                     subdomain=subdomain, port=request_server_port
                 )
