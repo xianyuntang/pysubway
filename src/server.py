@@ -6,7 +6,7 @@ from nanoid import generate
 
 from src.logger import logger
 from src.proxy import Proxy
-from src.shared import (
+from src.stream import (
     DEFAULT_DOMAIN,
     LOCAL_BIND,
     Message,

@@ -2,21 +2,28 @@ from __future__ import annotations
 
 import asyncio
 import ssl
+import time
 from pathlib import Path
+from typing import NamedTuple
 
 import aiohttp
 import uvloop
 from aiohttp.web import Application, AppRunner, Request, Response, TCPSite
 
 from src.logger import logger
-from src.shared import DEFAULT_DOMAIN, LOCAL_BIND
+from src.stream import DEFAULT_DOMAIN, LOCAL_BIND
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
+class Upstream(NamedTuple):
+    url: str
+    expire_in: float
+
+
 class Proxy:
     def __init__(self, *, domain: str, use_ssl: bool) -> None:
-        self.hosts: dict[str, str] = {}
+        self.upstreams: dict[str, Upstream] = {}
         self.domain = domain
         self.use_ssl = use_ssl
         self.protocol = "https" if use_ssl else "http"
@@ -27,20 +34,30 @@ class Proxy:
 
         self.app = app
 
-    def _build_upstream(self, *, subdomain: str) -> str:
+    def _clean_up(self) -> None:
+        now = time.time()
+
+        for key, upstream in self.upstreams.items():
+            if upstream.expire_in < now:
+                logger.info(f"Cleaning up... delete endpoint {key}")
+                del self.upstreams[key]
+
+    def _build_endpoint(self, *, subdomain: str) -> str:
         return f"{self.protocol}://{subdomain}.{self.domain}"
 
-    def _get_upstream(self, *, host: str) -> str | None:
+    def _get_upstream(self, *, host: str) -> Upstream | None:
         if host.endswith(f"{self.domain}"):
             subdomain = host.replace(f".{self.domain}", "")
-            upstream = self._build_upstream(subdomain=subdomain)
-            return self.hosts.get(upstream, None)
+            upstream = self._build_endpoint(subdomain=subdomain)
+            return self.upstreams.get(upstream, None)
         return None
 
     def register_upstream(self, *, subdomain: str, port: str) -> str:
-        upstream_url = self._build_upstream(subdomain=subdomain)
-        self.hosts[upstream_url] = f"http://{LOCAL_BIND}:{port}"
-        return upstream_url
+        endpoint = self._build_endpoint(subdomain=subdomain)
+        self.upstreams[endpoint] = Upstream(
+            url=f"http://{LOCAL_BIND}:{port}", expire_in=time.time()
+        )
+        return endpoint
 
     async def proxy(self, request: Request) -> Response:
         async with aiohttp.ClientSession() as session:
@@ -84,11 +101,12 @@ class Proxy:
         )
         logger.info(
             f"Proxy server will be serving your services on "
-            f"{self.protocol}*.{self.domain}"
+            f"{self.protocol}://<subdomain>.{self.domain}"
         )
 
         while True:
-            await asyncio.sleep(3600)
+            self._clean_up()
+            await asyncio.sleep(300)
 
 
 if __name__ == "__main__":

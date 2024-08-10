@@ -6,7 +6,7 @@ from asyncio import open_connection
 import uvloop
 
 from src.logger import logger
-from src.shared import Message, MessageType, Stream, bridge, read, write
+from src.stream import Message, MessageType, Stream, bridge, read, write
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 

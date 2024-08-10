@@ -5,7 +5,7 @@ import uvloop
 
 from src.client import Client
 from src.server import Server
-from src.shared import DEFAULT_DOMAIN
+from src.stream import DEFAULT_DOMAIN
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
