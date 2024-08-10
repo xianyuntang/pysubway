@@ -1,6 +1,7 @@
 import asyncio
 from asyncio import StreamReader, StreamWriter
 
+import uvloop
 from nanoid import generate
 
 from src.logger import logger
@@ -15,6 +16,8 @@ from src.shared import (
     read,
     write,
 )
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class Server:
@@ -58,9 +61,9 @@ class Server:
                 )
 
                 # domain name only have lower case
-                domain_prefix = generate().lower()
+                subdomain = generate().lower()
                 endpoint = self.proxy.register_upstream(
-                    domain_prefix=domain_prefix, port=request_server_port
+                    subdomain=subdomain, port=request_server_port
                 )
                 logger.info(f"Request server listen on {request_server_port}")
 

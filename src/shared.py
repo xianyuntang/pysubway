@@ -6,12 +6,15 @@ from asyncio import StreamReader, StreamWriter
 from enum import StrEnum, auto
 from typing import AsyncGenerator, NamedTuple
 
+import uvloop
 from pydantic import BaseModel
 
 from src.logger import logger
 
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+
 LOCAL_BIND = "0.0.0.0"  # noqa: S104
-DEFAULT_DOMAIN = "subway.dysonshark.com"
+DEFAULT_DOMAIN = "dysonshark.com"
 
 
 class MessageType(StrEnum):

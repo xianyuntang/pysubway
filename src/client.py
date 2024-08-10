@@ -3,8 +3,12 @@ from __future__ import annotations
 import asyncio
 from asyncio import open_connection
 
+import uvloop
+
 from src.logger import logger
 from src.shared import Message, MessageType, Stream, bridge, read, write
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class Client:
@@ -18,24 +22,45 @@ class Client:
         self.control_stream: Stream | None = None
 
     async def listen(self) -> None:
-        control_reader, control_writer = await open_connection(
-            self.control_host, self.control_port
-        )
+        try:
+            control_reader, control_writer = await open_connection(
+                self.control_host, self.control_port
+            )
+        except ConnectionRefusedError as e:
+            logger.error(
+                f"Failed to connect to {self.control_host}:{self.control_port} - {e}"
+            )
+            return
+
         self.control_stream = Stream(reader=control_reader, writer=control_writer)
 
         await write(control_writer, message=Message(type=MessageType.hello))
+
         async for message in read(control_reader):
             logger.debug(f"Receive message: {message}")
             if message.type == MessageType.hello and message.endpoint is not None:
                 logger.info(f"Server listens on {message.endpoint}")
 
             elif message.type == MessageType.open and message.id is not None:
-                remote_reader, remote_writer = await open_connection(
-                    self.control_host, self.control_port
-                )
-                local_reader, local_writer = await open_connection(
-                    "127.0.0.1", self.local_port
-                )
+                try:
+                    remote_reader, remote_writer = await open_connection(
+                        self.control_host, self.control_port
+                    )
+                except ConnectionRefusedError as e:
+                    logger.error(
+                        f"Failed to connect to {self.control_host}:{self.control_port}"
+                        f" - {e}"
+                    )
+                    return
+                try:
+                    local_reader, local_writer = await open_connection(
+                        "127.0.0.1", self.local_port
+                    )
+                except ConnectionRefusedError as e:
+                    logger.error(
+                        f"Failed to connect to 127.0.0.1:{self.local_port} - {e}"
+                    )
+                    return
 
                 await write(
                     remote_writer,

@@ -5,10 +5,13 @@ import ssl
 from pathlib import Path
 
 import aiohttp
+import uvloop
 from aiohttp.web import Application, AppRunner, Request, Response, TCPSite
 
 from src.logger import logger
 from src.shared import DEFAULT_DOMAIN, LOCAL_BIND
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class Proxy:
@@ -23,23 +26,27 @@ class Proxy:
 
         self.app = app
 
-    def register_upstream(self, *, domain_prefix: str, port: str) -> str:
+    def _build_upstream(self, *, subdomain: str) -> str:
         prefix = "https" if self.use_ssl else "http"
-        self.hosts[domain_prefix] = f"http://{LOCAL_BIND}:{port}"
-        return f"{prefix}://{domain_prefix}-{self.domain}:{self.port}"
+        return f"{prefix}://{subdomain}.{self.domain}:{self.port}"
 
-    def _get_upstream_url(self, *, host: str) -> str | None:
+    def _get_upstream(self, *, host: str) -> str | None:
         if host.endswith(f"{self.domain}:{self.port}"):
-            domain_prefix = host.replace(f"-{self.domain}:{self.port}", "")
-            return self.hosts.get(domain_prefix, None)
-
+            subdomain = host.replace(f".{self.domain}:{self.port}", "")
+            upstream = self._build_upstream(subdomain=subdomain)
+            return self.hosts.get(upstream, None)
         return None
+
+    def register_upstream(self, *, subdomain: str, port: str) -> str:
+        upstream_url = self._build_upstream(subdomain=subdomain)
+        self.hosts[upstream_url] = f"http://{LOCAL_BIND}:{port}"
+        return upstream_url
 
     async def proxy(self, request: Request) -> Response:
         async with aiohttp.ClientSession() as session:
-            upstream = self._get_upstream_url(host=request.host)
+            upstream = self._get_upstream(host=request.host)
             if upstream is None:
-                return Response(body="Page not found", status=404)
+                return Response(body="404 Not Found", status=404)
 
             async with session.request(
                 method=request.method,
@@ -47,11 +54,7 @@ class Proxy:
                 headers=request.headers,
                 data=await request.read(),
             ) as resp:
-                headers = {
-                    k: v
-                    for k, v in resp.headers.items()
-                    if k.lower() != "content-encoding"
-                }
+                headers = dict(resp.headers.items())
                 body = await resp.read()
                 return Response(body=body, status=resp.status, headers=headers)
 
@@ -69,7 +72,7 @@ class Proxy:
         site = TCPSite(runner, LOCAL_BIND, int(self.port), ssl_context=ssl_context)
         await site.start()
         logger.info(f"Proxy server listen on {LOCAL_BIND}:{self.port}")
-        logger.info(f"Proxy server will be serving your services on *-{self.domain}")
+        logger.info(f"Proxy server will be serving your services on *.{self.domain}")
 
         while True:
             await asyncio.sleep(3600)
