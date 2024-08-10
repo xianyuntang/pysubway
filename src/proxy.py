@@ -70,7 +70,7 @@ class Proxy:
                 )
 
             async with session.request(
-                url=f"{upstream}{request.path}",
+                url=f"{upstream.url}{request.path}",
                 method=request.method,
                 headers=request.headers,
                 data=await request.read(),
