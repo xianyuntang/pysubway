@@ -46,17 +46,25 @@ class Proxy:
         async with aiohttp.ClientSession() as session:
             upstream = self._get_upstream(host=request.host)
             if upstream is None:
-                return Response(body="404 Not Found", status=404)
+                return Response(
+                    body="404 Not Found",
+                    status=404,
+                    content_type="text/html",
+                )
 
             async with session.request(
+                url=f"{upstream}{request.path}",
                 method=request.method,
-                url=upstream,
                 headers=request.headers,
                 data=await request.read(),
             ) as resp:
-                headers = dict(resp.headers.items())
                 body = await resp.read()
-                return Response(body=body, status=resp.status, headers=headers)
+                return Response(
+                    body=body,
+                    status=resp.status,
+                    content_type=resp.content_type,
+                    charset=resp.charset,
+                )
 
     async def listen(self) -> None:
         ssl_context = None
