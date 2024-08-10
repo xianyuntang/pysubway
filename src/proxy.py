@@ -15,11 +15,12 @@ asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class Proxy:
-    def __init__(self, *, domain: str, port: str, use_ssl: bool) -> None:
+    def __init__(self, *, domain: str, use_ssl: bool) -> None:
         self.hosts: dict[str, str] = {}
         self.domain = domain
-        self.port = port
         self.use_ssl = use_ssl
+        self.protocol = "https" if use_ssl else "http"
+        self.port = 443 if use_ssl else 80
 
         app = Application()
         app.router.add_route("*", "/{tail:.*}", self.proxy)
@@ -27,12 +28,11 @@ class Proxy:
         self.app = app
 
     def _build_upstream(self, *, subdomain: str) -> str:
-        prefix = "https" if self.use_ssl else "http"
-        return f"{prefix}://{subdomain}.{self.domain}:{self.port}"
+        return f"{self.protocol}://{subdomain}.{self.domain}"
 
     def _get_upstream(self, *, host: str) -> str | None:
-        if host.endswith(f"{self.domain}:{self.port}"):
-            subdomain = host.replace(f".{self.domain}:{self.port}", "")
+        if host.endswith(f"{self.domain}"):
+            subdomain = host.replace(f".{self.domain}", "")
             upstream = self._build_upstream(subdomain=subdomain)
             return self.hosts.get(upstream, None)
         return None
@@ -71,13 +71,18 @@ class Proxy:
         await runner.setup()
         site = TCPSite(runner, LOCAL_BIND, int(self.port), ssl_context=ssl_context)
         await site.start()
-        logger.info(f"Proxy server listen on {LOCAL_BIND}:{self.port}")
-        logger.info(f"Proxy server will be serving your services on *.{self.domain}")
+        logger.info(
+            f"Proxy server listen on {self.protocol}://{LOCAL_BIND}:{self.port}"
+        )
+        logger.info(
+            f"Proxy server will be serving your services on "
+            f"{self.protocol}*.{self.domain}"
+        )
 
         while True:
             await asyncio.sleep(3600)
 
 
 if __name__ == "__main__":
-    proxy = Proxy(domain=DEFAULT_DOMAIN, use_ssl=False, port="5679")
+    proxy = Proxy(domain=DEFAULT_DOMAIN, use_ssl=False)
     asyncio.run(proxy.listen())
