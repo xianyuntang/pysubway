@@ -11,7 +11,7 @@ asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 def create_parser() -> ArgumentParser:
-    parser = ArgumentParser(description="subway")
+    parser = ArgumentParser(description="pysubway")
 
     subparsers = parser.add_subparsers(dest="command")
 

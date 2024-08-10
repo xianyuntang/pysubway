@@ -71,8 +71,8 @@ class Proxy:
         if self.use_ssl:
             ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
             ssl_context.load_cert_chain(
-                certfile=Path("~/.subway/ssl/domain.cert.pem").expanduser(),
-                keyfile=Path("~/.subway/ssl/private.key.pem").expanduser(),
+                certfile=Path("~/.pysubway/ssl/domain.cert.pem").expanduser(),
+                keyfile=Path("~/.pysubway/ssl/private.key.pem").expanduser(),
             )
 
         runner = AppRunner(self.app)
