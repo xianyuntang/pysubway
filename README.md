@@ -31,7 +31,7 @@ Note: Ensure you bind the necessary ports (-p <host_port>:<container_port>) to e
 
 ### Start Pysubway Client
 ```shell
-docker run ghcr.io/xianyuntang/pysubway:latest poe client --host <host> <local_port>
+docker run --network host ghcr.io/xianyuntang/pysubway:latest poe client --host <host> <local_port>
 ```
 
 
