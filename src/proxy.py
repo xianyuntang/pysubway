@@ -16,7 +16,7 @@ from src.logger import logger
 
 class Upstream(NamedTuple):
     host: str
-    port: str
+    port: int
     expire_in: float
 
     @property
@@ -30,7 +30,7 @@ class Proxy:
         *,
         domain: str,
         use_ssl: bool,
-        end_connection: Callable[[str], Coroutine[Any, Any, None]],
+        end_connection: Callable[[int], Coroutine[Any, Any, None]],
     ) -> None:
         self.domain = domain
         self.use_ssl = use_ssl
@@ -69,7 +69,7 @@ class Proxy:
             return self.upstreams.get(endpoint, None)
         return None
 
-    def register_upstream(self, *, port: str) -> str:
+    def register_upstream(self, *, port: int) -> str:
         subdomain = generate(alphabet="abcdefghijklmnopqrstuvwxyz0123456789", size=36)
         endpoint = self._build_endpoint(subdomain=subdomain)
         self.upstreams[endpoint] = Upstream(

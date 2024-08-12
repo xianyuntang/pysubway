@@ -1,7 +1,7 @@
-import asyncio
-from asyncio import Server as _Server
-from asyncio import StreamReader, StreamWriter
+from typing import TYPE_CHECKING
 
+from anyio import create_task_group, create_tcp_listener
+from anyio.abc import SocketAttribute, SocketStream
 from nanoid import generate
 
 from src.const import LOCAL_BIND
@@ -10,83 +10,83 @@ from src.proxy import Proxy
 from src.stream import (
     Message,
     MessageType,
-    Stream,
     bridge,
-    close_stream,
     read,
     write,
 )
+
+if TYPE_CHECKING:
+    from anyio.streams.stapled import MultiListener
 
 
 class Server:
     def __init__(self, *, control_port: str, domain: str, use_ssl: bool) -> None:
         self.control_port = control_port
-        self.request_streams: dict[str, Stream] = {}  # [id, Stream]
-        self.request_servers: dict[str, _Server] = {}  # [port, Server]
-        self.control_streams: dict[str, Stream] = {}  # [port, Server]
+        self.request_streams: dict[str, SocketStream] = {}  # [id, SocketStream]
+        self.request_servers: dict[
+            int, MultiListener[SocketStream]
+        ] = {}  # [port, MultiListener[SocketStream]]
+        self.control_streams: dict[int, SocketStream] = {}  # [port, SocketStream]
 
         self.proxy = Proxy(
             domain=domain, use_ssl=use_ssl, end_connection=self.end_connection
         )
 
-    async def end_connection(self, port: str) -> None:
+    async def end_connection(self, port: int) -> None:
         request_server = self.request_servers.pop(port)
         control_stream = self.control_streams.pop(port)
         if request_server:
             await write(
-                writer=control_stream.writer,
+                control_stream,
                 message=Message(type=MessageType.close),
             )
-            request_server.close()
-            await close_stream(control_stream.writer)
+            await request_server.aclose()
+            await control_stream.aclose()
 
     async def listen(self) -> None:
-        control_server = await asyncio.start_server(
-            self.handle_connection, LOCAL_BIND, self.control_port
+        control_server = await create_tcp_listener(
+            local_host=LOCAL_BIND, local_port=int(self.control_port)
         )
 
-        async with control_server:
-            logger.info(f"Control server listen on {LOCAL_BIND}:{self.control_port}")
-            await asyncio.gather(control_server.start_serving(), self.proxy.listen())
+        logger.info(f"Control server listen on {LOCAL_BIND}:{self.control_port}")
+        async with create_task_group() as task_group:
+            task_group.start_soon(control_server.serve, self.handle_connection)
+            task_group.start_soon(self.proxy.listen)
 
-    async def handle_connection(
-        self, reader: StreamReader, writer: StreamWriter
-    ) -> None:
-        control_stream = Stream(reader=reader, writer=writer)
-        async for message in read(reader):
+    async def handle_connection(self, control_stream: SocketStream) -> None:
+        async for message in read(control_stream):
             logger.debug("Receive message: %s", message)
             if message.type == MessageType.hello:
-                request_server = await asyncio.start_server(
-                    lambda request_reader,
-                    request_writer: self.handle_request_connection(
-                        control_stream=control_stream,
-                        request_stream=Stream(
-                            reader=request_reader, writer=request_writer
-                        ),
-                    ),
-                    LOCAL_BIND,
-                    0,
+                request_server = await create_tcp_listener(
+                    local_host=LOCAL_BIND, local_port=5050
                 )
 
-                request_server_port: str = str(
-                    request_server.sockets[0].getsockname()[1]
+                request_server_port: int = int(
+                    request_server.listeners[0].extra(SocketAttribute.local_address)[1]
                 )
 
                 endpoint = self.proxy.register_upstream(port=request_server_port)
-                logger.info(f"Request server listen on {request_server_port}")
+                logger.info(
+                    f"Request server listen on http://{LOCAL_BIND}:{request_server_port}"
+                )
 
                 self.request_servers[request_server_port] = request_server
                 self.control_streams[request_server_port] = control_stream
 
                 await write(
-                    writer,
+                    control_stream,
                     message=Message(
                         type=MessageType.hello,
                         endpoint=endpoint,
                     ),
                 )
-                async with request_server:
-                    await request_server.serve_forever()
+
+                await request_server.serve(
+                    lambda rs: self.handle_request_connection(
+                        control_stream=control_stream, request_stream=rs
+                    )
+                )
+
             elif message.type == MessageType.accept and message.id is not None:
                 request_stream = self.request_streams.pop(message.id)
                 if request_stream:
@@ -94,11 +94,11 @@ class Server:
                     break
 
     async def handle_request_connection(
-        self, control_stream: Stream, request_stream: Stream
+        self, control_stream: SocketStream, request_stream: SocketStream
     ) -> None:
         request_id = generate()
         logger.info("Receive request with id: %s", request_id)
         self.request_streams[request_id] = request_stream
         await write(
-            control_stream.writer, message=Message(type=MessageType.open, id=request_id)
+            control_stream, message=Message(type=MessageType.open, id=request_id)
         )
