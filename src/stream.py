@@ -28,38 +28,32 @@ class Message(BaseModel):
 
 
 async def _receive_or_timeout(stream: SocketStream) -> bytes | None:
-    result: bytes = b""
+    result: bytes | None = None
 
     with contextlib.suppress(Exception):
         async with create_task_group() as task_group:
 
             async def wrap_receive() -> bytes:
                 nonlocal result
-                result += await stream.receive()
+                result = await stream.receive()
                 task_group.cancel_scope.cancel()
                 return result
 
             async def wrap_sleep() -> None:
-                await sleep(5)
+                await sleep(1)
                 task_group.cancel_scope.cancel()
 
             task_group.start_soon(wrap_receive)
             task_group.start_soon(wrap_sleep)
-
     return result
 
 
 async def _pipe(stream1: SocketStream, stream2: SocketStream) -> None:
-    try:
-        while True:
-            data = await _receive_or_timeout(stream1)
-            if not data:
-                break
-            await stream2.send(data)
-    except Exception as e:  # noqa: BLE001
-        logger.error(e)
-    finally:
-        await stream2.aclose()
+    while True:
+        data = await _receive_or_timeout(stream1)
+        if not data:
+            break
+        await stream2.send(data)
 
 
 async def bridge(stream1: SocketStream, stream2: SocketStream) -> None:
