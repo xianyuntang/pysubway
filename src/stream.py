@@ -40,7 +40,7 @@ async def _receive_or_timeout(stream: SocketStream) -> bytes | None:
                 return result
 
             async def wrap_sleep() -> None:
-                await sleep(1)
+                await sleep(5)
                 task_group.cancel_scope.cancel()
 
             task_group.start_soon(wrap_receive)
