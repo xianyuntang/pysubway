@@ -9,11 +9,10 @@ from typing import NamedTuple
 import aiohttp
 import uvloop
 from aiohttp.web import Application, AppRunner, Request, Response, TCPSite
+from nanoid import generate
 
 from src.const import DEFAULT_DOMAIN, EXPIRE_TIME, LOCAL_BIND
 from src.logger import logger
-
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class Upstream(NamedTuple):
@@ -56,7 +55,8 @@ class Proxy:
             return self.upstreams.get(upstream, None)
         return None
 
-    def register_upstream(self, *, subdomain: str, port: str) -> str:
+    def register_upstream(self, *, port: str) -> str:
+        subdomain = generate(alphabet="abcdefghijklmnopqrstuvwxyz0123456789", size=36)
         endpoint = self._build_endpoint(subdomain=subdomain)
         self.upstreams[endpoint] = Upstream(
             url=f"http://{LOCAL_BIND}:{port}", expire_in=time.time() + EXPIRE_TIME
@@ -115,5 +115,4 @@ class Proxy:
 
 if __name__ == "__main__":
     proxy = Proxy(domain=DEFAULT_DOMAIN, use_ssl=False)
-    proxy.register_upstream(subdomain="sdfsd", port="444")
-    asyncio.run(proxy.listen())
+    uvloop.run(proxy.listen())

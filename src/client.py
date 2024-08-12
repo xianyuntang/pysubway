@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import asyncio
 from asyncio import open_connection
 
 import uvloop
 
 from src.logger import logger
 from src.stream import Message, MessageType, Stream, bridge, read, write
-
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class Client:
@@ -74,4 +71,4 @@ class Client:
 
 if __name__ == "__main__":
     client = Client(control_host="0.0.0.0", control_port="5678", local_port="4200")  # noqa: S104
-    asyncio.run(client.listen())
+    uvloop.run(client.listen())

@@ -6,12 +6,9 @@ from asyncio import StreamReader, StreamWriter
 from enum import StrEnum, auto
 from typing import AsyncGenerator, NamedTuple
 
-import uvloop
 from pydantic import BaseModel
 
 from src.logger import logger
-
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class MessageType(StrEnum):
@@ -56,7 +53,7 @@ async def bridge(stream1: Stream, stream2: Stream) -> None:
             asyncio.create_task(_pipe(reader=stream2.reader, writer=stream1.writer)),
         ],
         timeout=0,
-        return_when=asyncio.FIRST_COMPLETED,
+        return_when=asyncio.ALL_COMPLETED,
     )
 
 

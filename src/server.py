@@ -16,8 +16,6 @@ from src.stream import (
     write,
 )
 
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
 
 class Server:
     def __init__(self, *, control_port: str, domain: str, use_ssl: bool) -> None:
@@ -57,13 +55,7 @@ class Server:
                     request_server.sockets[0].getsockname()[1]
                 )
 
-                # domain name only have lower case
-                subdomain = generate(
-                    alphabet="abcdefghijklmnopqrstuvwxyz0123456789", size=36
-                )
-                endpoint = self.proxy.register_upstream(
-                    subdomain=subdomain, port=request_server_port
-                )
+                endpoint = self.proxy.register_upstream(port=request_server_port)
                 logger.info(f"Request server listen on {request_server_port}")
 
                 await write(
@@ -94,4 +86,4 @@ class Server:
 
 if __name__ == "__main__":
     server = Server(control_port="5678", domain=DEFAULT_DOMAIN, use_ssl=False)
-    asyncio.run(server.listen())
+    uvloop.run(server.listen())

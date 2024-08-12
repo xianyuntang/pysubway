@@ -1,4 +1,3 @@
-import asyncio
 from argparse import ArgumentParser, Namespace
 
 import uvloop
@@ -6,8 +5,6 @@ import uvloop
 from src.client import Client
 from src.const import DEFAULT_DOMAIN
 from src.server import Server
-
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 def create_parser() -> ArgumentParser:
@@ -68,4 +65,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    uvloop.run(main())
