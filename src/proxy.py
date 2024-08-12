@@ -21,7 +21,7 @@ class Upstream(NamedTuple):
 
     @property
     def url(self) -> str:
-        return f"{self.host}://{self.port}"
+        return f"http://{self.host}:{self.port}"
 
 
 class Proxy:
