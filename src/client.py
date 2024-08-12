@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from asyncio import open_connection
 
-import uvloop
-
 from src.logger import logger
 from src.stream import Message, MessageType, Stream, bridge, read, write
 
@@ -16,8 +14,6 @@ class Client:
         self.control_port = control_port
         self.local_port = local_port
 
-        self.control_stream: Stream | None = None
-
     async def listen(self) -> None:
         try:
             control_reader, control_writer = await open_connection(
@@ -29,8 +25,6 @@ class Client:
             )
             return
 
-        self.control_stream = Stream(reader=control_reader, writer=control_writer)
-
         await write(control_writer, message=Message(type=MessageType.hello))
 
         async for message in read(control_reader):
@@ -38,7 +32,12 @@ class Client:
             if message.type == MessageType.hello and message.endpoint is not None:
                 logger.info(f"Server listens on {message.endpoint}")
 
+            elif message.type == MessageType.close:
+                logger.info("End connection")
+                return
+
             elif message.type == MessageType.open and message.id is not None:
+                logger.info(f"Receive request with id: {message.id}")
                 try:
                     remote_reader, remote_writer = await open_connection(
                         self.control_host, self.control_port
@@ -64,11 +63,6 @@ class Client:
                     message=Message(type=MessageType.accept, id=message.id),
                 )
                 await bridge(
-                    Stream(reader=remote_reader, writer=remote_writer),
                     Stream(reader=local_reader, writer=local_writer),
+                    Stream(reader=remote_reader, writer=remote_writer),
                 )
-
-
-if __name__ == "__main__":
-    client = Client(control_host="0.0.0.0", control_port="5678", local_port="4200")  # noqa: S104
-    uvloop.run(client.listen())

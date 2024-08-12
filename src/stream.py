@@ -1,8 +1,13 @@
 from __future__ import annotations
 
-import asyncio
 import json
-from asyncio import StreamReader, StreamWriter
+from asyncio import (
+    ALL_COMPLETED,
+    StreamReader,
+    StreamWriter,
+    create_task,
+    wait,
+)
 from enum import StrEnum, auto
 from typing import AsyncGenerator, NamedTuple
 
@@ -15,6 +20,7 @@ class MessageType(StrEnum):
     hello = auto()
     open = auto()
     accept = auto()
+    close = auto()
 
 
 class Message(BaseModel):
@@ -37,23 +43,22 @@ async def _pipe(*, reader: StreamReader, writer: StreamWriter) -> None:
             writer.write(data)
             await writer.drain()
     except Exception as e:  # noqa: BLE001
-        logger.debug(e)
+        logger.error(e)
     finally:
-        writer.close()
         try:
-            await writer.wait_closed()
+            await close_stream(writer)
         except Exception as e:  # noqa: BLE001
-            logger.debug(e)
+            logger.error(e)
 
 
 async def bridge(stream1: Stream, stream2: Stream) -> None:
-    await asyncio.wait(
+    await wait(
         [
-            asyncio.create_task(_pipe(reader=stream1.reader, writer=stream2.writer)),
-            asyncio.create_task(_pipe(reader=stream2.reader, writer=stream1.writer)),
+            create_task(_pipe(reader=stream1.reader, writer=stream2.writer)),
+            create_task(_pipe(reader=stream2.reader, writer=stream1.writer)),
         ],
         timeout=0,
-        return_when=asyncio.ALL_COMPLETED,
+        return_when=ALL_COMPLETED,
     )
 
 
@@ -78,3 +83,8 @@ async def write(writer: StreamWriter, *, message: Message) -> None:
     writer.write(message_header + message_body)
     await writer.drain()
     logger.debug("Send message %s", message_data)
+
+
+async def close_stream(writer: StreamWriter) -> None:
+    writer.close()
+    await writer.wait_closed()

@@ -4,37 +4,49 @@ import asyncio
 import ssl
 import time
 from pathlib import Path
-from typing import NamedTuple
+from typing import Any, Callable, Coroutine, NamedTuple
 
 import aiohttp
-import uvloop
 from aiohttp.web import Application, AppRunner, Request, Response, TCPSite
 from nanoid import generate
 
-from src.const import DEFAULT_DOMAIN, EXPIRE_TIME, LOCAL_BIND
+from src.const import CLEAN_UP_INTERVAL, EXPIRE_TIME, LOCAL_BIND
 from src.logger import logger
 
 
 class Upstream(NamedTuple):
-    url: str
+    host: str
+    port: str
     expire_in: float
+
+    @property
+    def url(self) -> str:
+        return f"{self.host}://{self.port}"
 
 
 class Proxy:
-    def __init__(self, *, domain: str, use_ssl: bool) -> None:
-        self.upstreams: dict[str, Upstream] = {}
+    def __init__(
+        self,
+        *,
+        domain: str,
+        use_ssl: bool,
+        end_connection: Callable[[str], Coroutine[Any, Any, None]],
+    ) -> None:
         self.domain = domain
         self.use_ssl = use_ssl
         self.protocol = "https" if use_ssl else "http"
         self.port = 443 if use_ssl else 80
         self.expire_after = 3600
+        self.end_connection = end_connection
+
+        self.upstreams: dict[str, Upstream] = {}
 
         app = Application()
         app.router.add_route("*", "/{tail:.*}", self.proxy)
 
         self.app = app
 
-    def _clean_up(self) -> None:
+    async def _clean_up(self) -> None:
         now = time.time()
 
         to_be_cleaned = []
@@ -42,7 +54,9 @@ class Proxy:
             if upstream.expire_in < now:
                 to_be_cleaned.append(key)
         for key in to_be_cleaned:
-            self.upstreams.pop(key)
+            upstream = self.upstreams.pop(key)
+            await self.end_connection(upstream.port)
+
         logger.info(f"Cleaning up... delete {len(to_be_cleaned)} endpoint")
 
     def _build_endpoint(self, *, subdomain: str) -> str:
@@ -51,15 +65,15 @@ class Proxy:
     def _get_upstream(self, *, host: str) -> Upstream | None:
         if host.endswith(f"{self.domain}"):
             subdomain = host.replace(f".{self.domain}", "")
-            upstream = self._build_endpoint(subdomain=subdomain)
-            return self.upstreams.get(upstream, None)
+            endpoint = self._build_endpoint(subdomain=subdomain)
+            return self.upstreams.get(endpoint, None)
         return None
 
     def register_upstream(self, *, port: str) -> str:
         subdomain = generate(alphabet="abcdefghijklmnopqrstuvwxyz0123456789", size=36)
         endpoint = self._build_endpoint(subdomain=subdomain)
         self.upstreams[endpoint] = Upstream(
-            url=f"http://{LOCAL_BIND}:{port}", expire_in=time.time() + EXPIRE_TIME
+            host=LOCAL_BIND, port=port, expire_in=time.time() + EXPIRE_TIME
         )
         return endpoint
 
@@ -109,10 +123,5 @@ class Proxy:
         )
 
         while True:
-            self._clean_up()
-            await asyncio.sleep(60)
-
-
-if __name__ == "__main__":
-    proxy = Proxy(domain=DEFAULT_DOMAIN, use_ssl=False)
-    uvloop.run(proxy.listen())
+            await self._clean_up()
+            await asyncio.sleep(CLEAN_UP_INTERVAL)
