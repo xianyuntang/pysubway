@@ -57,9 +57,7 @@ class Server:
         async for message in read(control_stream):
             logger.debug("Receive message: %s", message)
             if message.type == MessageType.hello:
-                request_server = await create_tcp_listener(
-                    local_host=LOCAL_BIND, local_port=5050
-                )
+                request_server = await create_tcp_listener(local_host=LOCAL_BIND)
 
                 request_server_port: int = int(
                     request_server.listeners[0].extra(SocketAttribute.local_address)[1]
