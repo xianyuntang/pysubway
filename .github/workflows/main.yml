@@ -1,6 +1,4 @@
 name: CI
-env:
-  BRANCH_NAME: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
 
 on:
   push:
@@ -29,6 +27,8 @@ jobs:
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
+        env:
+          BRANCH_NAME: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
         with:
           context: .
           push: true
