@@ -63,11 +63,9 @@ class Proxy:
         return f"{self.protocol}://{subdomain}.{self.domain}"
 
     def _get_upstream(self, *, host: str) -> Upstream | None:
-        if host.endswith(f"{self.domain}"):
-            subdomain = host.replace(f".{self.domain}", "")
-            endpoint = self._build_endpoint(subdomain=subdomain)
-            return self.upstreams.get(endpoint, None)
-        return None
+        subdomain = host.split(".")[0]
+        endpoint = self._build_endpoint(subdomain=subdomain)
+        return self.upstreams.get(endpoint, None)
 
     def register_upstream(self, *, port: int) -> str:
         subdomain = generate(alphabet="abcdefghijklmnopqrstuvwxyz0123456789", size=36)

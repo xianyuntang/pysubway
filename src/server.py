@@ -93,7 +93,7 @@ class Server:
                 elif message.type == MessageType.accept and message.id is not None:
                     request_stream = self.request_streams.pop(message.id)
                     if request_stream:
-                        task_group.start_soon(bridge, request_stream, control_stream, 3)
+                        task_group.start_soon(bridge, request_stream, control_stream)
                         break
 
     async def handle_request_connection(

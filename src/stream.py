@@ -54,21 +54,19 @@ async def _receive_or_timeout(
     return result
 
 
-async def _pipe(stream1: SocketStream, stream2: SocketStream, timeout: float) -> None:
+async def _pipe(stream1: SocketStream, stream2: SocketStream) -> None:
     while True:
-        data = await _receive_or_timeout(stream1, timeout=timeout)
+        data = await _receive_or_timeout(stream1)
         if not data:
             break
         await stream2.send(data)
     await stream2.aclose()
 
 
-async def bridge(
-    stream1: SocketStream, stream2: SocketStream, timeout: float = 1.0
-) -> None:
+async def bridge(stream1: SocketStream, stream2: SocketStream) -> None:
     async with create_task_group() as task_group:
-        task_group.start_soon(_pipe, stream1, stream2, timeout)
-        task_group.start_soon(_pipe, stream2, stream1, timeout)
+        task_group.start_soon(_pipe, stream1, stream2)
+        task_group.start_soon(_pipe, stream2, stream1)
 
 
 async def read(socket: SocketStream) -> AsyncGenerator[Message | None, None]:
