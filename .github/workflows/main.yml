@@ -27,10 +27,8 @@ jobs:
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
-        env:
-          tag: ghcr.io/${{ github.repository_owner }}/pysubway:${{ github.head_ref != '' && github.head_ref || github.ref_name }}
         with:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: $tag
+          tags: ghcr.io/${{ github.repository_owner }}/pysubway:${{ github.head_ref != '' && github.head_ref || github.ref_name }}
