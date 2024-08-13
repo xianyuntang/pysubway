@@ -54,44 +54,47 @@ class Server:
             task_group.start_soon(self.proxy.listen)
 
     async def handle_connection(self, control_stream: SocketStream) -> None:
-        async for message in read(control_stream):
-            logger.debug("Receive message: %s", message)
-            if message is None:
-                pass
-            elif message.type == MessageType.hello:
-                request_server = await create_tcp_listener(local_host=LOCAL_BIND)
+        async with create_task_group() as task_group:
+            async for message in read(control_stream):
+                logger.debug("Receive message: %s", message)
+                if message is None:
+                    pass
+                elif message.type == MessageType.hello:
+                    request_server = await create_tcp_listener(local_host=LOCAL_BIND)
 
-                request_server_port: int = int(
-                    request_server.listeners[0].extra(SocketAttribute.local_address)[1]
-                )
-
-                endpoint = self.proxy.register_upstream(port=request_server_port)
-                logger.info(
-                    f"Request server listen on http://{LOCAL_BIND}:{request_server_port}"
-                )
-
-                self.request_servers[request_server_port] = request_server
-                self.control_streams[request_server_port] = control_stream
-
-                await write(
-                    control_stream,
-                    message=Message(
-                        type=MessageType.hello,
-                        endpoint=endpoint,
-                    ),
-                )
-
-                await request_server.serve(
-                    lambda rs: self.handle_request_connection(
-                        control_stream=control_stream, request_stream=rs
+                    request_server_port: int = int(
+                        request_server.listeners[0].extra(
+                            SocketAttribute.local_address
+                        )[1]
                     )
-                )
 
-            elif message.type == MessageType.accept and message.id is not None:
-                request_stream = self.request_streams.pop(message.id)
-                if request_stream:
-                    await bridge(request_stream, control_stream)
-                    break
+                    endpoint = self.proxy.register_upstream(port=request_server_port)
+                    logger.info(
+                        f"Request server listen on http://{LOCAL_BIND}:{request_server_port}"
+                    )
+
+                    self.request_servers[request_server_port] = request_server
+                    self.control_streams[request_server_port] = control_stream
+
+                    await write(
+                        control_stream,
+                        Message(
+                            type=MessageType.hello,
+                            endpoint=endpoint,
+                        ),
+                    )
+
+                    await request_server.serve(
+                        lambda rs: self.handle_request_connection(
+                            control_stream=control_stream, request_stream=rs
+                        )
+                    )
+
+                elif message.type == MessageType.accept and message.id is not None:
+                    request_stream = self.request_streams.pop(message.id)
+                    if request_stream:
+                        task_group.start_soon(bridge, request_stream, control_stream)
+                        break
 
     async def handle_request_connection(
         self, control_stream: SocketStream, request_stream: SocketStream

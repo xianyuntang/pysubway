@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, AsyncGenerator
 from anyio import create_task_group, sleep
 from pydantic import BaseModel
 
+from src.const import DEFAULT_TIMEOUT
 from src.logger import logger
 
 if TYPE_CHECKING:
@@ -27,7 +28,12 @@ class Message(BaseModel):
     endpoint: str | None = None
 
 
-async def _receive_or_timeout(stream: SocketStream, size: int = 65535) -> bytes | None:
+async def _receive_or_timeout(
+    stream: SocketStream,
+    *,
+    timeout: float = DEFAULT_TIMEOUT,
+    size: int = 65535,
+) -> bytes | None:
     result: bytes | None = None
 
     with contextlib.suppress(Exception):
@@ -40,7 +46,7 @@ async def _receive_or_timeout(stream: SocketStream, size: int = 65535) -> bytes 
                 return result
 
             async def wrap_sleep() -> None:
-                await sleep(1)
+                await sleep(timeout)
                 task_group.cancel_scope.cancel()
 
             task_group.start_soon(wrap_receive)
@@ -48,24 +54,26 @@ async def _receive_or_timeout(stream: SocketStream, size: int = 65535) -> bytes 
     return result
 
 
-async def _pipe(stream1: SocketStream, stream2: SocketStream) -> None:
+async def _pipe(stream1: SocketStream, stream2: SocketStream, timeout: float) -> None:
     while True:
-        data = await _receive_or_timeout(stream1)
+        data = await _receive_or_timeout(stream1, timeout=timeout)
         if not data:
             break
         await stream2.send(data)
     await stream2.aclose()
 
 
-async def bridge(stream1: SocketStream, stream2: SocketStream) -> None:
+async def bridge(
+    stream1: SocketStream, stream2: SocketStream, timeout: float = 1.0
+) -> None:
     async with create_task_group() as task_group:
-        task_group.start_soon(_pipe, stream1, stream2)
-        task_group.start_soon(_pipe, stream2, stream1)
+        task_group.start_soon(_pipe, stream1, stream2, timeout)
+        task_group.start_soon(_pipe, stream2, stream1, timeout)
 
 
 async def read(socket: SocketStream) -> AsyncGenerator[Message | None, None]:
     while True:
-        length_data = await _receive_or_timeout(socket, 10)
+        length_data = await _receive_or_timeout(socket, size=10)
         if length_data is None:
             yield None
             continue
@@ -77,7 +85,7 @@ async def read(socket: SocketStream) -> AsyncGenerator[Message | None, None]:
 
         message = ""
         while True:
-            message_data = await _receive_or_timeout(socket, message_length)
+            message_data = await _receive_or_timeout(socket, size=message_length)
 
             if message_data is None:
                 yield None
@@ -90,7 +98,7 @@ async def read(socket: SocketStream) -> AsyncGenerator[Message | None, None]:
         yield Message(**json.loads(message))
 
 
-async def write(socket: SocketStream, *, message: Message) -> None:
+async def write(socket: SocketStream, message: Message) -> None:
     message_data = message.model_dump_json()
     message_body = message_data.encode()
     message_header = f"{len(message_body):>10}".encode()

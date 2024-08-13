@@ -59,8 +59,8 @@ class Client:
                             f"Failed to connect to 127.0.0.1:{self.local_port} - {e}"
                         )
                         continue
+
                     await write(
-                        remote_stream,
-                        message=Message(type=MessageType.accept, id=message.id),
+                        remote_stream, Message(type=MessageType.accept, id=message.id)
                     )
-                    task_group.start_soon(bridge, remote_stream, local_stream)
+                    task_group.start_soon(bridge, remote_stream, local_stream, 3)
