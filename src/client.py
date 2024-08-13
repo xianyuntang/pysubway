@@ -63,4 +63,4 @@ class Client:
                     await write(
                         remote_stream, Message(type=MessageType.accept, id=message.id)
                     )
-                    task_group.start_soon(bridge, remote_stream, local_stream, 3)
+                    task_group.start_soon(bridge, remote_stream, local_stream, 1)
