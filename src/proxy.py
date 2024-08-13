@@ -71,7 +71,7 @@ class Proxy:
 
     def _get_host(self, *, request: Request) -> str | None:
         if self.behind_proxy:
-            return request.headers.get("X-Forwarded-For")
+            return request.headers.get("X-Forwarded-Host")
         return request.host
 
     def register_upstream(self, *, port: int) -> str:
