@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from asyncio import open_connection
+from anyio import connect_tcp, create_task_group
 
 from src.logger import logger
-from src.stream import Message, MessageType, Stream, bridge, read, write
+from src.stream import Message, MessageType, bridge, read, write
 
 
 class Client:
     def __init__(
-        self, *, control_host: str, control_port: str, local_port: str
+        self, *, control_host: str, control_port: int, local_port: int
     ) -> None:
         self.control_host = control_host
         self.control_port = control_port
@@ -16,8 +16,8 @@ class Client:
 
     async def listen(self) -> None:
         try:
-            control_reader, control_writer = await open_connection(
-                self.control_host, self.control_port
+            control_stream = await connect_tcp(
+                self.control_host, int(self.control_port)
             )
         except ConnectionRefusedError as e:
             logger.error(
@@ -25,44 +25,38 @@ class Client:
             )
             return
 
-        await write(control_writer, message=Message(type=MessageType.hello))
+        await write(control_stream, message=Message(type=MessageType.hello))
+        try:
+            async with create_task_group() as task_group:
+                async for message in read(control_stream):
+                    logger.debug(f"Receive message: {message}")
+                    if message is None:
+                        pass
+                    elif (
+                        message.type == MessageType.hello
+                        and message.endpoint is not None
+                    ):
+                        logger.info(f"Server listens on {message.endpoint}")
 
-        async for message in read(control_reader):
-            logger.debug(f"Receive message: {message}")
-            if message.type == MessageType.hello and message.endpoint is not None:
-                logger.info(f"Server listens on {message.endpoint}")
+                    elif message.type == MessageType.close:
+                        logger.info("End connection")
+                        return
 
-            elif message.type == MessageType.close:
-                logger.info("End connection")
-                return
+                    elif message.type == MessageType.open and message.id is not None:
+                        logger.info(f"Receive request with id: {message.id}")
 
-            elif message.type == MessageType.open and message.id is not None:
-                logger.info(f"Receive request with id: {message.id}")
-                try:
-                    remote_reader, remote_writer = await open_connection(
-                        self.control_host, self.control_port
-                    )
-                except ConnectionRefusedError as e:
-                    logger.error(
-                        f"Failed to connect to {self.control_host}:{self.control_port}"
-                        f" - {e}"
-                    )
-                    return
-                try:
-                    local_reader, local_writer = await open_connection(
-                        "127.0.0.1", self.local_port
-                    )
-                except ConnectionRefusedError as e:
-                    logger.error(
-                        f"Failed to connect to 127.0.0.1:{self.local_port} - {e}"
-                    )
-                    continue
+                        remote_stream = await connect_tcp(
+                            self.control_host, self.control_port
+                        )
 
-                await write(
-                    remote_writer,
-                    message=Message(type=MessageType.accept, id=message.id),
-                )
-                await bridge(
-                    Stream(reader=local_reader, writer=local_writer),
-                    Stream(reader=remote_reader, writer=remote_writer),
-                )
+                        local_stream = await connect_tcp("127.0.0.1", self.local_port)
+
+                        await write(
+                            remote_stream,
+                            Message(type=MessageType.accept, id=message.id),
+                        )
+                        task_group.start_soon(bridge, remote_stream, local_stream)
+
+        except* OSError as eg:
+            for exc in eg.exceptions:
+                logger.error(exc)
