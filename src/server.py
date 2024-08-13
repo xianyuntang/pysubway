@@ -56,7 +56,9 @@ class Server:
     async def handle_connection(self, control_stream: SocketStream) -> None:
         async for message in read(control_stream):
             logger.debug("Receive message: %s", message)
-            if message.type == MessageType.hello:
+            if message is None:
+                pass
+            elif message.type == MessageType.hello:
                 request_server = await create_tcp_listener(local_host=LOCAL_BIND)
 
                 request_server_port: int = int(

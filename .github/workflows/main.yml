@@ -1,4 +1,6 @@
 name: CI
+env:
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 on:
   push:
@@ -11,7 +13,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.1.7
@@ -32,4 +33,4 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/${{ github.repository_owner }}/pysubway:latest
+          tags: ghcr.io/${{ github.repository_owner }}/pysubway:$BRANCH_NAME

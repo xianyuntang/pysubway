@@ -27,7 +27,7 @@ class Message(BaseModel):
     endpoint: str | None = None
 
 
-async def _receive_or_timeout(stream: SocketStream) -> bytes | None:
+async def _receive_or_timeout(stream: SocketStream, size: int = 65535) -> bytes | None:
     result: bytes | None = None
 
     with contextlib.suppress(Exception):
@@ -35,7 +35,7 @@ async def _receive_or_timeout(stream: SocketStream) -> bytes | None:
 
             async def wrap_receive() -> bytes:
                 nonlocal result
-                result = await stream.receive()
+                result = await stream.receive(size)
                 task_group.cancel_scope.cancel()
                 return result
 
@@ -54,6 +54,7 @@ async def _pipe(stream1: SocketStream, stream2: SocketStream) -> None:
         if not data:
             break
         await stream2.send(data)
+    await stream2.aclose()
 
 
 async def bridge(stream1: SocketStream, stream2: SocketStream) -> None:
@@ -62,15 +63,29 @@ async def bridge(stream1: SocketStream, stream2: SocketStream) -> None:
         task_group.start_soon(_pipe, stream2, stream1)
 
 
-async def read(socket: SocketStream) -> AsyncGenerator[Message, None]:
+async def read(socket: SocketStream) -> AsyncGenerator[Message | None, None]:
     while True:
-        length_data = await socket.receive(10)
+        length_data = await _receive_or_timeout(socket, 10)
+        if length_data is None:
+            yield None
+            continue
+
         logger.debug(length_data)
         if not length_data:
             break
         message_length = int(length_data.decode().strip())
-        message = (await socket.receive(message_length)).decode()
-        logger.debug(message)
+
+        message = ""
+        while True:
+            message_data = await _receive_or_timeout(socket, message_length)
+
+            if message_data is None:
+                yield None
+                continue
+
+            message = message_data.decode()
+            logger.debug(message)
+            break
 
         yield Message(**json.loads(message))
 
