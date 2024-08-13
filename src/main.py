@@ -35,6 +35,12 @@ def create_parser() -> ArgumentParser:
         default=DEFAULT_DOMAIN,
         help="Custom domain name",
     )
+    server_parser.add_argument(
+        "--behind_proxy",
+        type=lambda v: v.lower() in ["true", "1", "yes"],
+        default=False,
+        help="Set it to true if the server is set up behind a proxy",
+    )
 
     return parser
 
@@ -51,6 +57,7 @@ async def handle_server(args: Namespace) -> None:
         control_port=args.control_port,
         domain=args.domain,
         use_ssl=args.use_ssl,
+        behind_proxy=args.behind_proxy,
     )
     await server.listen()
 

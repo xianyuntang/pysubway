@@ -20,7 +20,9 @@ if TYPE_CHECKING:
 
 
 class Server:
-    def __init__(self, *, control_port: str, domain: str, use_ssl: bool) -> None:
+    def __init__(
+        self, *, control_port: str, domain: str, use_ssl: bool, behind_proxy: bool
+    ) -> None:
         self.control_port = control_port
         self.request_streams: dict[str, SocketStream] = {}  # [id, SocketStream]
         self.request_servers: dict[
@@ -29,7 +31,10 @@ class Server:
         self.control_streams: dict[int, SocketStream] = {}  # [port, SocketStream]
 
         self.proxy = Proxy(
-            domain=domain, use_ssl=use_ssl, end_connection=self.end_connection
+            domain=domain,
+            use_ssl=use_ssl,
+            behind_proxy=behind_proxy,
+            end_connection=self.end_connection,
         )
 
     async def end_connection(self, port: int) -> None:

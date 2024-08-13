@@ -30,10 +30,12 @@ class Proxy:
         *,
         domain: str,
         use_ssl: bool,
+        behind_proxy: bool,
         end_connection: Callable[[int], Coroutine[Any, Any, None]],
     ) -> None:
         self.domain = domain
         self.use_ssl = use_ssl
+        self.behind_proxy = behind_proxy
         self.protocol = "https" if use_ssl else "http"
         self.port = 443 if use_ssl else 80
         self.expire_after = 3600
@@ -67,6 +69,11 @@ class Proxy:
         endpoint = self._build_endpoint(subdomain=subdomain)
         return self.upstreams.get(endpoint, None)
 
+    def _get_host(self, *, request: Request) -> str | None:
+        if self.behind_proxy:
+            return request.headers.get("X-Forwarded-For")
+        return request.host
+
     def register_upstream(self, *, port: int) -> str:
         subdomain = generate(alphabet="abcdefghijklmnopqrstuvwxyz0123456789", size=36)
         endpoint = self._build_endpoint(subdomain=subdomain)
@@ -77,7 +84,17 @@ class Proxy:
 
     async def proxy(self, request: Request) -> Response:
         async with aiohttp.ClientSession() as session:
-            upstream = self._get_upstream(host=request.host)
+            host = self._get_host(request=request)
+            logger.info(f"Received request from host {host}")
+
+            if host is None:
+                return Response(
+                    body="404 Not Found",
+                    status=404,
+                    content_type="text/html",
+                )
+
+            upstream = self._get_upstream(host=host)
             if upstream is None:
                 return Response(
                     body="404 Not Found",
