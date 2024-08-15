@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-import contextlib
 import json
 from enum import StrEnum, auto
 from typing import TYPE_CHECKING, AsyncGenerator
 
-from anyio import create_task_group, sleep
+from anyio import (
+    BrokenResourceError,
+    ClosedResourceError,
+    EndOfStream,
+    create_task_group,
+)
 from pydantic import BaseModel
 
-from src.const import DEFAULT_TIMEOUT
 from src.logger import logger
 
 if TYPE_CHECKING:
@@ -28,39 +31,15 @@ class Message(BaseModel):
     endpoint: str | None = None
 
 
-async def _receive_or_timeout(
-    stream: SocketStream,
-    *,
-    timeout: float = DEFAULT_TIMEOUT,
-    size: int = 65535,
-) -> bytes | None:
-    result: bytes | None = None
-
-    with contextlib.suppress(Exception):
-        async with create_task_group() as task_group:
-
-            async def wrap_receive() -> bytes:
-                nonlocal result
-                result = await stream.receive(size)
-                task_group.cancel_scope.cancel()
-                return result
-
-            async def wrap_sleep() -> None:
-                await sleep(timeout)
-                task_group.cancel_scope.cancel()
-
-            task_group.start_soon(wrap_receive)
-            task_group.start_soon(wrap_sleep)
-    return result
-
-
 async def _pipe(stream1: SocketStream, stream2: SocketStream) -> None:
-    while True:
-        data = await _receive_or_timeout(stream1)
-        if not data:
-            break
-        await stream2.send(data)
-    await stream2.aclose()
+    try:
+        while True:
+            data = await stream1.receive()
+            if not data:
+                break
+            await stream2.send(data)
+    except (ClosedResourceError, BrokenResourceError, EndOfStream):
+        await stream2.aclose()
 
 
 async def bridge(stream1: SocketStream, stream2: SocketStream) -> None:
@@ -70,20 +49,23 @@ async def bridge(stream1: SocketStream, stream2: SocketStream) -> None:
 
 
 async def read(socket: SocketStream) -> AsyncGenerator[Message | None, None]:
-    while True:
-        length_data = await socket.receive(10)
-        if not length_data:
-            break
-        message_length = int(length_data.decode().strip())
+    try:
+        while True:
+            length_data = await socket.receive(10)
+            if not length_data:
+                break
+            message_length = int(length_data.decode().strip())
 
-        message_data = await socket.receive(message_length)
-        if not message_data:
-            break
+            message_data = await socket.receive(message_length)
+            if not message_data:
+                break
 
-        message = message_data.decode()
-        logger.debug(message)
+            message = message_data.decode()
+            logger.debug(message)
 
-        yield Message(**json.loads(message))
+            yield Message(**json.loads(message))
+    except EndOfStream:
+        logger.info("End of connection")
 
 
 async def write(socket: SocketStream, message: Message) -> None:

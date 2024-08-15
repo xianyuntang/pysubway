@@ -26,37 +26,29 @@ class Client:
             return
 
         await write(control_stream, message=Message(type=MessageType.hello))
-        try:
-            async with create_task_group() as task_group:
-                async for message in read(control_stream):
-                    logger.debug(f"Receive message: {message}")
-                    if message is None:
-                        pass
-                    elif (
-                        message.type == MessageType.hello
-                        and message.endpoint is not None
-                    ):
-                        logger.info(f"Server listens on {message.endpoint}")
+        async with create_task_group() as task_group:
+            async for message in read(control_stream):
+                logger.debug(f"Receive message: {message}")
+                if message is None:
+                    pass
+                elif message.type == MessageType.hello and message.endpoint is not None:
+                    logger.info(f"Server listens on {message.endpoint}")
 
-                    elif message.type == MessageType.close:
-                        logger.info("End connection")
-                        return
+                elif message.type == MessageType.close:
+                    logger.info("End of connection")
+                    return
 
-                    elif message.type == MessageType.open and message.id is not None:
-                        logger.info(f"Receive request with id: {message.id}")
+                elif message.type == MessageType.open and message.id is not None:
+                    logger.info(f"Receive request with id: {message.id}")
 
-                        remote_stream = await connect_tcp(
-                            self.control_host, self.control_port
-                        )
+                    remote_stream = await connect_tcp(
+                        self.control_host, self.control_port
+                    )
 
-                        local_stream = await connect_tcp("127.0.0.1", self.local_port)
+                    local_stream = await connect_tcp("127.0.0.1", self.local_port)
 
-                        await write(
-                            remote_stream,
-                            Message(type=MessageType.accept, id=message.id),
-                        )
-                        task_group.start_soon(bridge, remote_stream, local_stream)
-
-        except* OSError as eg:
-            for exc in eg.exceptions:
-                logger.error(exc)
+                    await write(
+                        remote_stream,
+                        Message(type=MessageType.accept, id=message.id),
+                    )
+                    task_group.start_soon(bridge, remote_stream, local_stream)
