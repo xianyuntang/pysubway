@@ -59,7 +59,7 @@ class Proxy:
             upstream = self.upstreams.pop(key)
             await self.end_connection(upstream.port)
 
-        logger.info(f"Cleaning up... delete {len(to_be_cleaned)} endpoint")
+        logger.debug(f"Cleaning up... delete {len(to_be_cleaned)} endpoint")
 
     def _build_endpoint(self, *, subdomain: str) -> str:
         return f"{self.protocol}://{subdomain}.{self.domain}"
