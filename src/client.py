@@ -3,7 +3,7 @@ from __future__ import annotations
 from anyio import connect_tcp, create_task_group
 
 from src.logger import logger
-from src.stream import Message, MessageType, bridge, read, write
+from src.stream import Message, MessageType, bridge, is_tcp_open, read, write
 
 
 class Client:
@@ -15,7 +15,15 @@ class Client:
         self.local_port = local_port
         self.subdomain = subdomain
 
+    async def _get_localhost(self) -> str:
+        if await is_tcp_open("host.docker.internal", self.local_port):
+            return "host.docker.internal"
+        return "127.0.0.1"
+
     async def listen(self) -> None:
+        localhost = await self._get_localhost()
+        logger.info(f"Localhost is pointing to {localhost}")
+
         try:
             control_stream = await connect_tcp(
                 self.control_host, int(self.control_port)
@@ -51,7 +59,7 @@ class Client:
                             self.control_host, self.control_port
                         )
 
-                        local_stream = await connect_tcp("127.0.0.1", self.local_port)
+                        local_stream = await connect_tcp(localhost, self.local_port)
                     except OSError as e:
                         logger.error(e)
                         return

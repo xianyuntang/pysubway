@@ -8,6 +8,7 @@ from anyio import (
     BrokenResourceError,
     ClosedResourceError,
     EndOfStream,
+    connect_tcp,
     create_task_group,
 )
 from pydantic import BaseModel
@@ -76,3 +77,13 @@ async def write(socket: SocketStream, message: Message) -> None:
 
     await socket.send(message_header + message_body)
     logger.debug("Send message %s", message_data)
+
+
+async def is_tcp_open(host: str, port: int) -> bool:
+    try:
+        stream = await connect_tcp(host, port)
+        await stream.aclose()
+    except OSError:
+        return False
+    else:
+        return True
