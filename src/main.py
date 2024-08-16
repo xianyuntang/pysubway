@@ -3,7 +3,6 @@ from argparse import ArgumentParser, Namespace
 import uvloop
 
 from src.client import Client
-from src.const import DEFAULT_DOMAIN
 from src.server import Server
 
 
@@ -12,34 +11,30 @@ def create_parser() -> ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command")
 
-    client_parser = subparsers.add_parser("client", help="Client command")
-    client_parser.add_argument("local_port", type=str, help="local server host")
-    client_parser.add_argument("--host", type=str, help="control server host")
+    client_parser = subparsers.add_parser("client")
+    client_parser.add_argument("local_port", type=int)
+    client_parser.add_argument("--host", type=str)
     client_parser.add_argument(
-        "--port", type=str, default="5678", help="control server port"
+        "--port",
+        type=int,
     )
 
-    server_parser = subparsers.add_parser("server", help="Server command")
+    server_parser = subparsers.add_parser("server")
     server_parser.add_argument(
-        "--control_port", type=str, default="5678", help="control port"
+        "--control_port",
+        type=int,
     )
     server_parser.add_argument(
         "--use_ssl",
         type=lambda v: v.lower() in ["true", "1", "yes"],
-        default=False,
-        help="Use https instead of http",
     )
     server_parser.add_argument(
         "--domain",
         type=str,
-        default=DEFAULT_DOMAIN,
-        help="Custom domain name",
     )
     server_parser.add_argument(
         "--behind_proxy",
         type=lambda v: v.lower() in ["true", "1", "yes"],
-        default=False,
-        help="Set it to true if the server is set up behind a proxy",
     )
 
     return parser
