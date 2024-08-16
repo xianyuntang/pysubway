@@ -41,11 +41,15 @@ class Client:
                 elif message.type == MessageType.open and message.id is not None:
                     logger.info(f"Receive request with id: {message.id}")
 
-                    remote_stream = await connect_tcp(
-                        self.control_host, self.control_port
-                    )
+                    try:
+                        remote_stream = await connect_tcp(
+                            self.control_host, self.control_port
+                        )
 
-                    local_stream = await connect_tcp("127.0.0.1", self.local_port)
+                        local_stream = await connect_tcp("127.0.0.1", self.local_port)
+                    except OSError as e:
+                        logger.error(e)
+                        return
 
                     await write(
                         remote_stream,
