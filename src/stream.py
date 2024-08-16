@@ -29,6 +29,7 @@ class Message(BaseModel):
     type: MessageType
     id: str | None = None
     endpoint: str | None = None
+    subdomain: str | None = None
 
 
 async def _pipe(stream1: SocketStream, stream2: SocketStream) -> None:
@@ -65,7 +66,7 @@ async def read(socket: SocketStream) -> AsyncGenerator[Message | None, None]:
 
             yield Message(**json.loads(message))
     except EndOfStream:
-        logger.info("End of connection")
+        logger.debug("End of connection")
 
 
 async def write(socket: SocketStream, message: Message) -> None:

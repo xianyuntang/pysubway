@@ -18,6 +18,10 @@ def create_parser() -> ArgumentParser:
         "--port",
         type=int,
     )
+    client_parser.add_argument(
+        "--subdomain",
+        type=str,
+    )
 
     server_parser = subparsers.add_parser("server")
     server_parser.add_argument(
@@ -42,7 +46,10 @@ def create_parser() -> ArgumentParser:
 
 async def handle_client(args: Namespace) -> None:
     client = Client(
-        control_host=args.host, control_port=args.port, local_port=args.local_port
+        control_host=args.host,
+        control_port=args.port,
+        local_port=args.local_port,
+        subdomain=args.subdomain,
     )
     await client.listen()
 

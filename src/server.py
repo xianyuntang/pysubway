@@ -73,7 +73,12 @@ class Server:
                         )[1]
                     )
 
-                    endpoint = self.proxy.register_upstream(port=request_server_port)
+                    subdomain = self.proxy.gen_subdomain(subdomain=message.subdomain)
+
+                    endpoint = self.proxy.register_upstream(
+                        port=request_server_port, subdomain=subdomain
+                    )
+
                     logger.info(
                         f"Request server listen on http://{LOCAL_BIND}:{request_server_port}"
                     )
@@ -95,7 +100,7 @@ class Server:
                         )
                     )
 
-                elif message.type == MessageType.accept and message.id is not None:
+                elif message.type == MessageType.accept and message.id:
                     request_stream = self.request_streams.pop(message.id)
                     if request_stream:
                         task_group.start_soon(bridge, request_stream, control_stream)

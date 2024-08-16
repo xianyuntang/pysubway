@@ -8,11 +8,12 @@ from src.stream import Message, MessageType, bridge, read, write
 
 class Client:
     def __init__(
-        self, *, control_host: str, control_port: int, local_port: int
+        self, *, control_host: str, control_port: int, local_port: int, subdomain: str
     ) -> None:
         self.control_host = control_host
         self.control_port = control_port
         self.local_port = local_port
+        self.subdomain = subdomain
 
     async def listen(self) -> None:
         try:
@@ -25,7 +26,11 @@ class Client:
             )
             return
 
-        await write(control_stream, message=Message(type=MessageType.hello))
+        await write(
+            control_stream,
+            message=Message(type=MessageType.hello, subdomain=self.subdomain),
+        )
+
         async with create_task_group() as task_group:
             async for message in read(control_stream):
                 logger.debug(f"Receive message: {message}")

@@ -54,11 +54,12 @@ filterwarnings = [
 
 
 [tool.poe.tasks.client]
-cmd = "python -m src.main client --host=$host --port=$port $local_port"
+cmd = "python -m src.main client --host=$host --port=$port --subdomain=$subdomain $local_port "
 args = [
     { name = "local_port", positional = true, required = true, help = "The local port to bind to." },
     { name = "host", default = "pysubway.com", help = "The host of the control server." },
     { name = "port", default = "5678", help = "The port of the control server." },
+    { name = "subdomain", help = "(Optinoal) The specified subdomain."}
 ]
 
 

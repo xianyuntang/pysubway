@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import ssl
 import time
 from pathlib import Path
-from typing import Any, Callable, Coroutine, NamedTuple
+from typing import Any, Callable, Coroutine, NamedTuple, cast
 
 import aiohttp
 from aiohttp.web import Application, AppRunner, Request, Response, TCPSite
@@ -64,43 +65,56 @@ class Proxy:
     def _build_endpoint(self, *, subdomain: str) -> str:
         return f"{self.protocol}://{subdomain}.{self.domain}"
 
-    def _get_upstream(self, *, host: str) -> Upstream | None:
-        subdomain = host.split(".")[0]
-        endpoint = self._build_endpoint(subdomain=subdomain)
-        return self.upstreams.get(endpoint, None)
+    def _get_upstream(self, *, subdomain: str) -> Upstream | None:
+        return self.upstreams.get(subdomain, None)
 
     def _get_host(self, *, request: Request) -> str | None:
         if self.behind_proxy:
             return request.headers.get("X-Forwarded-Host")
         return request.host
 
-    def register_upstream(self, *, port: int) -> str:
-        subdomain = generate(alphabet="abcdefghijklmnopqrstuvwxyz0123456789", size=36)
+    def _extract_subdomain(self, *, host: str) -> str | None:
+        match = re.search(r"https?://([^.]+)\.[^.]+\.[^.]+(?:/.*)?$", host)
+        if match:
+            return match.group(1)
+        return None
+
+    def register_upstream(self, *, port: int, subdomain: str) -> str:
         endpoint = self._build_endpoint(subdomain=subdomain)
-        self.upstreams[endpoint] = Upstream(
+        self.upstreams[subdomain] = Upstream(
             host=LOCAL_BIND, port=port, expire_in=time.time() + EXPIRE_TIME
         )
         return endpoint
 
+    async def _gen_404_response(self) -> Response:
+        return Response(
+            body="404 Not Found",
+            status=404,
+            content_type="text/html",
+        )
+
+    def gen_subdomain(self, subdomain: str | None) -> str:
+        if subdomain is None or subdomain in self.upstreams:
+            return cast(
+                str, generate(alphabet="abcdefghijklmnopqrstuvwxyz0123456789-", size=12)
+            )
+
+        return subdomain
+
     async def proxy(self, request: Request) -> Response:
         async with aiohttp.ClientSession() as session:
             host = self._get_host(request=request)
-            logger.info(f"Received request from host {host}")
-
             if host is None:
-                return Response(
-                    body="404 Not Found",
-                    status=404,
-                    content_type="text/html",
-                )
+                return await self._gen_404_response()
 
-            upstream = self._get_upstream(host=host)
+            subdomain = self._extract_subdomain(host=host)
+            if subdomain is None:
+                return await self._gen_404_response()
+
+            logger.info(f"Received request from host {host}")
+            upstream = self._get_upstream(subdomain=subdomain)
             if upstream is None:
-                return Response(
-                    body="404 Not Found",
-                    status=404,
-                    content_type="text/html",
-                )
+                return await self._gen_404_response()
 
             async with session.request(
                 url=f"{upstream.url}{request.path}",
