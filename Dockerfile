@@ -1,7 +1,7 @@
-FROM python:3.12.4-alpine as python
+FROM python:3.12.4-alpine AS python
 ENV PYTHONUNBUFFERED=true
 
-FROM python as poetry
+FROM python AS poetry
 
 ENV POETRY_HOME=/etc/poetry
 ENV POETRY_VERSION=1.8.3
@@ -12,7 +12,7 @@ ENV PATH="$POETRY_HOME/bin:$PATH"
 RUN apk add curl
 RUN curl -sSL https://install.python-poetry.org | python -
 
-FROM poetry as builder
+FROM poetry AS builder
 WORKDIR /app
 COPY pyproject.toml ./
 COPY poetry.lock ./
