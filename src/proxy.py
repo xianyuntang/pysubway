@@ -74,7 +74,7 @@ class Proxy:
         return request.host
 
     def _extract_subdomain(self, *, host: str) -> str | None:
-        match = re.search(r"https?://([^.]+)\.[^.]+\.[^.]+(?:/.*)?$", host)
+        match = re.search(r"([^.]+)\.[^.]+\.[^.]+(?:/.*)?$", host)
         if match:
             return match.group(1)
         return None

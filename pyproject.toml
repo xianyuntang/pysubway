@@ -59,7 +59,7 @@ args = [
     { name = "local_port", positional = true, required = true, help = "The local port to bind to." },
     { name = "host", default = "pysubway.com", help = "The host of the control server." },
     { name = "port", default = "5678", help = "The port of the control server." },
-    { name = "subdomain", help = "(Optinoal) The specified subdomain."}
+    { name = "subdomain", default = "*", help = "(Optinoal) The specified subdomain." }
 ]
 
 
