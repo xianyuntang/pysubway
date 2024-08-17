@@ -67,7 +67,7 @@ args = [
 cmd = "python -m src.main server --control_port=$control_port --domain=$domain --use_ssl=$use_ssl --behind_proxy=$behind_proxy "
 args = [
     { name = "control_port", default = "5678", help = "The control port for the server." },
-    { name = "domain", default = "pysubway.com", help = "Custom domain to use when self-hosted." },
+    { name = "domain", required = true, help = "Custom domain to use when self-hosted." },
     { name = "use_ssl", default = "false", help = "Set this to true if your server is using HTTPS." },
     { name = "behind_proxy", default = "false", help = "Set this to true if your server is behind a proxy." }
 

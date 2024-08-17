@@ -1,0 +1,14 @@
+services:
+  pysubway:
+    image: ghcr.io/xianyuntang/pysubway:latest
+    container_name: pysubway.com
+    restart: always
+    ports:
+      - "5678:5678"
+    command: ["poe", "server", "--use_ssl", "true", "--behind_proxy", "true"]
+    volumes:
+      - /mnt/Service/volume/pysubway/ssl:/root/.pysubway/ssl
+    networks:
+      - exposed-site
+
+
