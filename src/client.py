@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from anyio import connect_tcp, create_task_group
 
+from src.exception import LocalhostUnreachableError
 from src.logger import logger
 from src.stream import Message, MessageType, bridge, is_tcp_open, read, write
 
@@ -18,7 +19,11 @@ class Client:
     async def _get_localhost(self) -> str:
         if await is_tcp_open("host.docker.internal", self.local_port):
             return "host.docker.internal"
-        return "127.0.0.1"
+
+        if await is_tcp_open("127.0.0.1", self.local_port):
+            return "127.0.0.1"
+
+        raise LocalhostUnreachableError
 
     async def listen(self) -> None:
         localhost = await self._get_localhost()
