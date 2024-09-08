@@ -1,3 +1,6 @@
+# Deprecated
+Please check the repo [subway](https://github.com/xianyuntang/subway)
+
 # Pysubway
 A HTTP tunnel service written in Python
 
